@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NKUST - 動作分析展示</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #fff;
+            padding: 10px 20px;
+            border-bottom: 2px solid #00BCD4;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+        }
+
+        .logo-container img {
+            height: 50px;
+            margin-right: 10px;
+        }
+
+        .logo-container span {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .nav-buttons button {
+            background-color: #00BCD4;
+            color: #fff;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .nav-buttons button:hover {
+            background-color: #0097a7;
+        }
+
+        .menu {
+            position: relative;
+        }
+
+        .menu-button {
+            background-color: #00BCD4;
+            color: #fff;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .menu-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            z-index: 10;
+            width: 200px;
+        }
+
+        .menu-dropdown button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            text-align: left;
+            background: none;
+            border: none;
+            cursor: pointer;
+        }
+
+        .menu-dropdown button:hover {
+            background-color: #f4f4f4;
+        }
+
+        .menu:hover .menu-dropdown {
+            display: block;
+        }
+
+        .content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        .box {
+            background-color: #777;
+            color: #fff;
+            text-align: center;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .box-large {
+            width: 50%;
+            height: 700px;
+        }
+
+        .box-medium {
+            width: 20%;
+            height: 700px;
+        }
+
+        .box-small {
+            width: 20%;
+            height: 700px;
+        }
+
+        .upload-form {
+            display: none;
+            width: 100%;
+            height: 100%;
+            background-color: #f4f4f4;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border-radius: 10px;
+        }
+
+        .upload-form input[type="file"] {
+            margin: 20px 0;
+        }
+
+        .restart-button {
+            background-color: #00BCD4;
+            color: #fff;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-align: center;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+
+        .restart-button:hover {
+            background-color: #0097a7;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 10px;
+            background-color: #f4f4f4;
+            border-top: 1px solid #ccc;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+
+        .video-container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #000;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .video-container video {
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .angle-display {
+            padding: 20px;
+            color: white;
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        .angle-title {
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-align: center;
+            color: #00BCD4;
+        }
+
+        .angle-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            padding: 10px;
+        }
+
+        .angle-card {
+            background-color: rgba(0, 188, 212, 0.1);
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .angle-label {
+            font-size: 16px;
+            color: #00BCD4;
+            margin-bottom: 5px;
+        }
+
+        .angle-value {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        /* 添加動畫效果 */
+        @keyframes highlight {
+            0% {
+                background-color: rgba(0, 188, 212, 0.1);
+            }
+            50% {
+                background-color: rgba(0, 188, 212, 0.3);
+            }
+            100% {
+                background-color: rgba(0, 188, 212, 0.1);
+            }
+        }
+
+        .angle-update {
+            animation: highlight 0.5s ease-in-out;
+        }
+
+        .logo-container span {
+            font-size: 40px; /* 設置字體大小 */
+        }
+
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo-container">
+            <img src="{{ url_for('static', filename='img/nkust.png') }}" alt="NKUST Logo">
+            <span>國立高雄科技大學</span>
+        </div>
+        <div class="nav-buttons">
+            <button>動作分析</button>
+            <button>健身知識</button>
+            <button>器材介紹</button>
+        </div>
+        <div class="menu">
+            <button class="menu-button">選擇訓練類型</button>
+            <div class="menu-dropdown">
+                <button onclick="showUploadForm('squat')">深蹲訓練</button>
+                <button onclick="showUploadForm('bicep-curl')">二頭訓練</button>
+                <button onclick="showUploadForm('shoulder-press')">肩推訓練</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="content">
+        <div class="box box-medium">
+            <div class="angle-display">
+                <h3 class="angle-title">角度數據</h3>
+                <div id="angleContainer" class="angle-container">
+                    <!-- 角度卡片將被動態添加到這裡 -->
+                </div>
+            </div>
+        </div>
+        <div id="main-area" class="box box-large">
+            <div class="video-container">
+                <video id="processedVideo" controls>
+                    <source src="{{ url_for('uploaded_file', filename=filename) }}" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            </div>
+        </div>
+        <div class="box box-small">
+            示範影片
+        </div>
+    </div>
+
+    <div class="content" style="justify-content: flex-end;">
+        <a href="{{ url_for('index') }}">
+            <button class="restart-button">重新開始</button>
+        </a>
+    </div>
+
+    <script>
+        const detectionInfo = {{detection_info | tojson | safe}};
+        const video = document.getElementById('processedVideo');
+        const angleContainer = document.getElementById('angleContainer');
+
+        // 創建角度顯示卡片
+        function createAngleCards(angles) {
+            angleContainer.innerHTML = '';
+            for (const [angleName, angleValue] of Object.entries(angles)) {
+                const card = document.createElement('div');
+                card.className = 'angle-card';
+                card.id = `angle-${angleName}`;
+                card.innerHTML = `
+                    <div class="angle-label">${angleName}</div>
+                    <div class="angle-value">${angleValue.toFixed(1)}°</div>
+                `;
+                angleContainer.appendChild(card);
+            }
+        }
+
+        // 更新角度值
+        function updateAngleCards(angles) {
+            for (const [angleName, angleValue] of Object.entries(angles)) {
+                const card = document.getElementById(`angle-${angleName}`);
+                if (card) {
+                    const valueElement = card.querySelector('.angle-value');
+                    const oldValue = parseFloat(valueElement.textContent);
+                    const newValue = angleValue.toFixed(1);
+
+                    if (oldValue !== parseFloat(newValue)) {
+                        valueElement.textContent = `${newValue}°`;
+                        card.classList.remove('angle-update');
+                        void card.offsetWidth; // 觸發重繪
+                        card.classList.add('angle-update');
+                    }
+                }
+            }
+        }
+
+        // 監聽影片時間更新事件
+        video.addEventListener('timeupdate', () => {
+            const currentTime = video.currentTime;
+            const fps = 30; // 假設 30fps，根據實際情況調整
+            const frameIndex = Math.floor(currentTime * fps);
+
+            if (detectionInfo[frameIndex] && detectionInfo[frameIndex].angles) {
+                const angles = detectionInfo[frameIndex].angles;
+
+                // 如果是第一幀，創建卡片
+                if (frameIndex === 0) {
+                    createAngleCards(angles);
+                }
+
+                // 更新角度值
+                updateAngleCards(angles);
+            }
+        });
+
+        // 影片載入時創建初始卡片
+        video.addEventListener('loadeddata', () => {
+            if (detectionInfo[0] && detectionInfo[0].angles) {
+                createAngleCards(detectionInfo[0].angles);
+            }
+        });
+    </script>
+</body>
+</html>
