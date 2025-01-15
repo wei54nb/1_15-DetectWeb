@@ -37,7 +37,7 @@
 
         .nav-buttons {
             display: flex;
-            gap: 10px;
+            gap: 90px;
         }
 
         .nav-buttons button {
@@ -58,6 +58,7 @@
             position: relative;
         }
 
+
         .menu-button {
             background-color: #00BCD4;
             color: #fff;
@@ -65,6 +66,9 @@
             border: none;
             border-radius: 5px;
             cursor: pointer;
+            font-size: 16px;
+            width: 200px; /* 設置按鈕寬度 */
+            height: 40px; /* 設置按鈕高度 */
         }
 
         .menu-dropdown {
@@ -101,7 +105,7 @@
         .content {
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            align-items: flex-start;
             padding: 20px;
             gap: 20px;
         }
@@ -257,9 +261,9 @@
             <span>國立高雄科技大學</span>
         </div>
         <div class="nav-buttons">
-            <button>動作分析</button>
-            <button>健身知識</button>
-            <button>器材介紹</button>
+            <button class="menu-button">動作分析</button>
+            <button class="menu-button">健身知識</button>
+            <button class="menu-button">器材介紹</button>
         </div>
         <div class="menu">
             <button class="menu-button">選擇訓練類型</button>

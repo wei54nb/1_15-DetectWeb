@@ -41,6 +41,9 @@
             border: none;
             border-radius: 5px;
             cursor: pointer;
+            font-size: 16px;
+            width: 200px; /* 設置按鈕寬度 */
+            height: 40px; /* 設置按鈕高度 */
         }
 
         .menu-dropdown {
@@ -122,7 +125,13 @@
         }
 
         .logo-container span {
-            font-size: 40px; /* 設置字體大小 */
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 90px;
         }
     </style>
 </head>
@@ -132,7 +141,7 @@
             <img src="{{ url_for('static', filename='img/nkust.png') }}" alt="NKUST Logo">
             <span>國立高雄科技大學</span>
         </div>
-        <div class="head-fun-container">
+        <div class="nav-buttons">
             <button class="menu-button">動作分析</button>
             <button class="menu-button">動作知識</button>
             <button class="menu-button">器材介紹</button>
