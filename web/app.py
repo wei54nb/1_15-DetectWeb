@@ -22,7 +22,7 @@ OUTPUT_FOLDER = 'output'
 ALLOWED_EXTENSIONS = {'mp4', 'avi', 'mov'}
 
 MODEL_PATHS = {
-    'squat': 'D:\\project_Main\\modles\\yolov8_squat_model\\weights\\best.pt',
+    'squat': 'D:\\project_Main\\modles\\best_squat.pt',
     'bicep-curl': 'D:\\project_Main\\modles\\yolov8_bicep_model2\\weights\\best.pt',
     'shoulder-press': 'D:\\project_Main\\modles\\yolov8_shoulder_model\\weights\\best.pt'
 }

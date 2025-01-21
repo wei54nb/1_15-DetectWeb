@@ -5,6 +5,68 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NKUST - 動作分析展示</title>
     <style>
+
+        /* 新增的按鈕格式 */
+        .button {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            color: #fff;
+            text-transform: uppercase;
+            font-size: 1rem;
+            letter-spacing: 0.15rem;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+            text-align: center;
+            background-color: #00BCD4;
+            text-decoration: none; /* 去掉 a 的預設下劃線樣式 */
+            cursor: pointer; /* 統一鼠標樣式 */
+            border: none; /* 去掉 button 的預設邊框樣式 */
+            min-width: 60px; /* 設定最小寬度 */
+        }
+
+        .button:after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #00BCD4;
+            border-radius: 0.5rem;
+            z-index: -2;
+        }
+
+        .button:before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0%;
+            height: 100%;
+            background-color: #0088cc;
+            transition: all 0.3s;
+            border-radius: 0.5rem;
+            z-index: -1;
+        }
+
+        .button:hover {
+            color: #fff;
+        }
+
+        .button:hover:before {
+            width: 100%;
+        }
+
+
+        /* optional reset for presentation */
+        * {
+            font-family: Arial, sans-serif;
+            text-decoration: none;
+            font-size: 20px;
+        }
         body {
             margin: 0;
             font-family: Arial, sans-serif;
@@ -18,21 +80,23 @@
             background-color: #fff;
             padding: 10px 20px;
             border-bottom: 2px solid #00BCD4;
+            height: 150px;
         }
 
         .logo-container {
             display: flex;
             align-items: center;
+            gap: 30px; /* 圖片與文字之間的距離 */
         }
 
         .logo-container img {
-            height: 50px;
-            margin-right: 10px;
+            height: 50px; /* 圖片大小 */
         }
 
         .logo-container span {
-            font-size: 18px;
-            font-weight: bold;
+            font-size: 2rem; /* 增加字體大小 */
+            font-weight: bold; /* 讓文字更醒目 */
+            color: #000; /* 文字顏色 */
         }
 
         .nav-buttons {
@@ -68,7 +132,7 @@
             cursor: pointer;
             font-size: 16px;
             width: 200px; /* 設置按鈕寬度 */
-            height: 40px; /* 設置按鈕高度 */
+            height: 60px; /* 設置按鈕高度 */
         }
 
         .menu-dropdown {
@@ -248,25 +312,36 @@
             animation: highlight 0.5s ease-in-out;
         }
 
-        .logo-container span {
-            font-size: 40px; /* 設置字體大小 */
+        .fireworks {
+            left: 0;
+            pointer-events: none;
+            position: fixed;
+            top: 0;
+            z-index: 9999;
         }
 
+
     </style>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
 </head>
 <body>
+    <canvas class="fireworks" style="position: fixed; top: 0; left: 0; pointer-events: none; z-index: 9999;"></canvas>
     <div class="header">
         <div class="logo-container">
             <img src="{{ url_for('static', filename='img/nkust.png') }}" alt="NKUST Logo">
             <span>國立高雄科技大學</span>
         </div>
         <div class="nav-buttons">
-            <button class="menu-button">動作分析</button>
-            <button class="menu-button">健身知識</button>
-            <button class="menu-button">器材介紹</button>
+            <a href="{{ url_for('index') }}" class="button">
+                回首頁
+            </a>
+            <button class="button">動作知識</button>
+            <button class="button">器材介紹</button>
+
         </div>
         <div class="menu">
-            <button class="menu-button">選擇訓練類型</button>
+            <button class="button">選擇訓練類型</button>
             <div class="menu-dropdown">
                 <button onclick="showUploadForm('squat')">深蹲訓練</button>
                 <button onclick="showUploadForm('bicep-curl')">二頭訓練</button>
@@ -281,6 +356,23 @@
                 <h3 class="angle-title">角度數據</h3>
                 <div id="angleContainer" class="angle-container">
                     <!-- 角度卡片將被動態添加到這裡 -->
+                </div>
+                <div id="exercise-stats">
+                    <h3>運動統計</h3>
+                    <p>總計次數: <span
+                            id="total-reps">{{ detection_info[-1].rep_count if detection_info else 0 }}</span></p>
+
+                    <h4>詳細資訊</h4>
+                    <div id="detection-details">
+                        {% for frame in detection_info %}
+                        <div class="frame-info" style="display: none;" data-frame="{{ loop.index0 }}">
+                            <p>當前狀態: {{ frame.current_state }}</p>
+                            <p>計數: {{ frame.rep_count }}</p>
+                            <p>檢測置信度: {{ frame.yolo_detections[0].confidence if frame.yolo_detections else 'N/A'
+                                }}</p>
+                        </div>
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
         </div>
@@ -299,14 +391,142 @@
 
     <div class="content" style="justify-content: flex-end;">
         <a href="{{ url_for('index') }}">
-            <button class="restart-button">重新開始</button>
+            <button class="button">重新開始</button>
         </a>
     </div>
 
+    <script src="https://cpwebassets.codepen.io/assets/common/stopExecutionOnTimeout-2c7831bb44f98c1391d6a4ffda0e1fd302503391ca806e7fcc7b9b87197aec26.js"></script>
+    <script src="https://codepen.io/juliangarnier/pen/yMLaRG.js"></script>
     <script>
-        const detectionInfo = {{detection_info | tojson | safe}};
-        const video = document.getElementById('processedVideo');
-        const angleContainer = document.getElementById('angleContainer');
+        // 確保 canvas 在頁面加載完成後初始化
+        document.addEventListener('DOMContentLoaded', function () {
+            window.human = false;
+
+            var canvasEl = document.querySelector('.fireworks');
+            var ctx = canvasEl.getContext('2d');
+            var numberOfParticules = 30;
+            var pointerX = 0;
+            var pointerY = 0;
+            var tap = ('ontouchstart' in window || navigator.msMaxTouchPoints) ? 'touchstart' : 'mousedown';
+            var colors = ['#FF1461', '#18FF92', '#5A87FF', '#FBF38C'];
+
+            function setCanvasSize() {
+                canvasEl.width = window.innerWidth * 2;
+                canvasEl.height = window.innerHeight * 2;
+                canvasEl.style.width = window.innerWidth + 'px';
+                canvasEl.style.height = window.innerHeight + 'px';
+                canvasEl.getContext('2d').scale(2, 2);
+            }
+
+            function updateCoords(e) {
+                pointerX = e.clientX || e.touches[0].clientX;
+                pointerY = e.clientY || e.touches[0].clientY;
+            }
+
+            function setParticuleDirection(p) {
+                var angle = anime.random(0, 360) * Math.PI / 180;
+                var value = anime.random(50, 180);
+                var radius = [-1, 1][anime.random(0, 1)] * value;
+                return {
+                    x: p.x + radius * Math.cos(angle),
+                    y: p.y + radius * Math.sin(angle)
+                }
+            }
+
+            function createParticule(x, y) {
+                var p = {};
+                p.x = x;
+                p.y = y;
+                p.color = colors[anime.random(0, colors.length - 1)];
+                p.radius = anime.random(16, 32);
+                p.endPos = setParticuleDirection(p);
+                p.draw = function () {
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.radius, 0, 2 * Math.PI, true);
+                    ctx.fillStyle = p.color;
+                    ctx.fill();
+                }
+                return p;
+            }
+
+            function createCircle(x, y) {
+                var p = {};
+                p.x = x;
+                p.y = y;
+                p.color = '#FFF';
+                p.radius = 0.1;
+                p.alpha = .5;
+                p.lineWidth = 6;
+                p.draw = function () {
+                    ctx.globalAlpha = p.alpha;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.radius, 0, 2 * Math.PI, true);
+                    ctx.lineWidth = p.lineWidth;
+                    ctx.strokeStyle = p.color;
+                    ctx.stroke();
+                    ctx.globalAlpha = 1;
+                }
+                return p;
+            }
+
+            function renderParticule(anim) {
+                for (var i = 0; i < anim.animatables.length; i++) {
+                    anim.animatables[i].target.draw();
+                }
+            }
+
+            function animateParticules(x, y) {
+                var circle = createCircle(x, y);
+                var particules = [];
+                for (var i = 0; i < numberOfParticules; i++) {
+                    particules.push(createParticule(x, y));
+                }
+
+                anime.timeline().add({
+                    targets: particules,
+                    x: function (p) {
+                        return p.endPos.x;
+                    },
+                    y: function (p) {
+                        return p.endPos.y;
+                    },
+                    radius: 0.1,
+                    duration: anime.random(1200, 1800),
+                    easing: 'easeOutExpo',
+                    update: renderParticule
+                })
+                        .add({
+                            targets: circle,
+                            radius: anime.random(80, 160),
+                            lineWidth: 0,
+                            alpha: {
+                                value: 0,
+                                easing: 'linear',
+                                duration: anime.random(600, 800),
+                            },
+                            duration: anime.random(1200, 1800),
+                            easing: 'easeOutExpo',
+                            update: renderParticule
+                        }, 0);
+            }
+
+            var render = anime({
+                duration: Infinity,
+                update: function () {
+                    ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+                }
+            });
+
+            document.addEventListener(tap, function (e) {
+                window.human = true;
+                render.play();
+                updateCoords(e);
+                animateParticules(pointerX, pointerY);
+            }, false);
+
+            setCanvasSize();
+            window.addEventListener('resize', setCanvasSize, false);
+        });
 
         // 創建角度顯示卡片
         function createAngleCards(angles) {
