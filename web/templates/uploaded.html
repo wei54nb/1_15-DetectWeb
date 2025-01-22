@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NKUST - 動作分析展示</title>
     <style>
-
         /* 新增的按鈕格式 */
         .button {
             display: inline-block;
@@ -122,9 +121,8 @@
             position: relative;
         }
 
-
         .menu-button {
-            background-color: #00BCD4;
+             background-color: #00BCD4;
             color: #fff;
             padding: 10px 15px;
             border: none;
@@ -174,7 +172,7 @@
             gap: 20px;
         }
 
-        .box {
+         .box {
             background-color: #777;
             color: #fff;
             text-align: center;
@@ -199,21 +197,6 @@
             height: 700px;
         }
 
-        .upload-form {
-            display: none;
-            width: 100%;
-            height: 100%;
-            background-color: #f4f4f4;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            border-radius: 10px;
-        }
-
-        .upload-form input[type="file"] {
-            margin: 20px 0;
-        }
 
         .restart-button {
             background-color: #00BCD4;
@@ -231,16 +214,7 @@
             background-color: #0097a7;
         }
 
-        .footer {
-            text-align: center;
-            padding: 10px;
-            background-color: #f4f4f4;
-            border-top: 1px solid #ccc;
-            margin-top: 20px;
-            font-size: 14px;
-        }
-
-        .video-container {
+         .video-container {
             width: 100%;
             height: 100%;
             display: flex;
@@ -319,14 +293,11 @@
             top: 0;
             z-index: 9999;
         }
-
-
     </style>
-
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+     <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
 </head>
 <body>
-    <canvas class="fireworks" style="position: fixed; top: 0; left: 0; pointer-events: none; z-index: 9999;"></canvas>
+    <canvas class="fireworks"></canvas>
     <div class="header">
         <div class="logo-container">
             <img src="{{ url_for('static', filename='img/nkust.png') }}" alt="NKUST Logo">
@@ -340,22 +311,23 @@
             <button class="button">器材介紹</button>
 
         </div>
-        <div class="menu">
+         <div class="menu">
             <button class="button">選擇訓練類型</button>
             <div class="menu-dropdown">
                 <button onclick="showUploadForm('squat')">深蹲訓練</button>
                 <button onclick="showUploadForm('bicep-curl')">二頭訓練</button>
                 <button onclick="showUploadForm('shoulder-press')">肩推訓練</button>
+                <button onclick="showUploadForm('push-up')">伏地挺身</button>
             </div>
         </div>
     </div>
 
     <div class="content">
         <div class="box box-medium">
-            <div class="angle-display">
-                <h3 class="angle-title">角度數據</h3>
-                <div id="angleContainer" class="angle-container">
-                    <!-- 角度卡片將被動態添加到這裡 -->
+             <div class="angle-display">
+                 <h3 class="angle-title">角度數據</h3>
+                 <div id="angleContainer" class="angle-container">
+                     <!-- 角度卡片將被動態添加到這裡 -->
                 </div>
                 <div id="exercise-stats">
                     <h3>運動統計</h3>
@@ -368,169 +340,170 @@
                         <div class="frame-info" style="display: none;" data-frame="{{ loop.index0 }}">
                             <p>當前狀態: {{ frame.current_state }}</p>
                             <p>計數: {{ frame.rep_count }}</p>
-                            <p>檢測置信度: {{ frame.yolo_detections[0].confidence if frame.yolo_detections else 'N/A'
-                                }}</p>
+                            {% if frame.yolo_detections %}
+                                    <p>檢測置信度: {{ frame.yolo_detections[0].confidence if frame.yolo_detections else 'N/A' }}</p>
+                                {% endif %}
                         </div>
                         {% endfor %}
                     </div>
-                </div>
+                 </div>
             </div>
         </div>
         <div id="main-area" class="box box-large">
-            <div class="video-container">
-                <video id="processedVideo" controls>
-                    <source src="{{ url_for('uploaded_file', filename=filename) }}" type="video/mp4">
-                    Your browser does not support the video tag.
-                </video>
-            </div>
-        </div>
-        <div class="box box-small">
-            示範影片
+             <div class="video-container">
+                 <video id="processedVideo" controls>
+                     <source src="{{ url_for('uploaded_file', filename=filename) }}" type="video/mp4">
+                     Your browser does not support the video tag.
+                 </video>
+             </div>
+         </div>
+         <div class="box box-small">
+           示範影片
         </div>
     </div>
 
-    <div class="content" style="justify-content: flex-end;">
+     <div class="content" style="justify-content: flex-end;">
         <a href="{{ url_for('index') }}">
             <button class="button">重新開始</button>
         </a>
-    </div>
+     </div>
 
     <script src="https://cpwebassets.codepen.io/assets/common/stopExecutionOnTimeout-2c7831bb44f98c1391d6a4ffda0e1fd302503391ca806e7fcc7b9b87197aec26.js"></script>
     <script src="https://codepen.io/juliangarnier/pen/yMLaRG.js"></script>
     <script>
-        // 確保 canvas 在頁面加載完成後初始化
-        document.addEventListener('DOMContentLoaded', function () {
-            window.human = false;
+      // 確保 canvas 在頁面加載完成後初始化
+      document.addEventListener('DOMContentLoaded', function () {
+          window.human = false;
 
-            var canvasEl = document.querySelector('.fireworks');
-            var ctx = canvasEl.getContext('2d');
-            var numberOfParticules = 30;
-            var pointerX = 0;
-            var pointerY = 0;
-            var tap = ('ontouchstart' in window || navigator.msMaxTouchPoints) ? 'touchstart' : 'mousedown';
-            var colors = ['#FF1461', '#18FF92', '#5A87FF', '#FBF38C'];
+          var canvasEl = document.querySelector('.fireworks');
+          var ctx = canvasEl.getContext('2d');
+          var numberOfParticules = 30;
+          var pointerX = 0;
+          var pointerY = 0;
+          var tap = ('ontouchstart' in window || navigator.msMaxTouchPoints) ? 'touchstart' : 'mousedown';
+          var colors = ['#FF1461', '#18FF92', '#5A87FF', '#FBF38C'];
 
-            function setCanvasSize() {
-                canvasEl.width = window.innerWidth * 2;
-                canvasEl.height = window.innerHeight * 2;
-                canvasEl.style.width = window.innerWidth + 'px';
-                canvasEl.style.height = window.innerHeight + 'px';
-                canvasEl.getContext('2d').scale(2, 2);
-            }
+          function setCanvasSize() {
+              canvasEl.width = window.innerWidth * 2;
+              canvasEl.height = window.innerHeight * 2;
+              canvasEl.style.width = window.innerWidth + 'px';
+              canvasEl.style.height = window.innerHeight + 'px';
+              canvasEl.getContext('2d').scale(2, 2);
+          }
 
-            function updateCoords(e) {
-                pointerX = e.clientX || e.touches[0].clientX;
-                pointerY = e.clientY || e.touches[0].clientY;
-            }
+          function updateCoords(e) {
+              pointerX = e.clientX || e.touches[0].clientX;
+              pointerY = e.clientY || e.touches[0].clientY;
+          }
 
-            function setParticuleDirection(p) {
-                var angle = anime.random(0, 360) * Math.PI / 180;
-                var value = anime.random(50, 180);
-                var radius = [-1, 1][anime.random(0, 1)] * value;
-                return {
-                    x: p.x + radius * Math.cos(angle),
-                    y: p.y + radius * Math.sin(angle)
-                }
-            }
+          function setParticuleDirection(p) {
+              var angle = anime.random(0, 360) * Math.PI / 180;
+              var value = anime.random(50, 180);
+              var radius = [-1, 1][anime.random(0, 1)] * value;
+              return {
+                  x: p.x + radius * Math.cos(angle),
+                  y: p.y + radius * Math.sin(angle)
+              }
+          }
 
-            function createParticule(x, y) {
-                var p = {};
-                p.x = x;
-                p.y = y;
-                p.color = colors[anime.random(0, colors.length - 1)];
-                p.radius = anime.random(16, 32);
-                p.endPos = setParticuleDirection(p);
-                p.draw = function () {
-                    ctx.beginPath();
-                    ctx.arc(p.x, p.y, p.radius, 0, 2 * Math.PI, true);
-                    ctx.fillStyle = p.color;
-                    ctx.fill();
-                }
-                return p;
-            }
+          function createParticule(x, y) {
+              var p = {};
+              p.x = x;
+              p.y = y;
+              p.color = colors[anime.random(0, colors.length - 1)];
+              p.radius = anime.random(16, 32);
+              p.endPos = setParticuleDirection(p);
+              p.draw = function () {
+                  ctx.beginPath();
+                  ctx.arc(p.x, p.y, p.radius, 0, 2 * Math.PI, true);
+                  ctx.fillStyle = p.color;
+                  ctx.fill();
+              }
+              return p;
+          }
 
-            function createCircle(x, y) {
-                var p = {};
-                p.x = x;
-                p.y = y;
-                p.color = '#FFF';
-                p.radius = 0.1;
-                p.alpha = .5;
-                p.lineWidth = 6;
-                p.draw = function () {
-                    ctx.globalAlpha = p.alpha;
-                    ctx.beginPath();
-                    ctx.arc(p.x, p.y, p.radius, 0, 2 * Math.PI, true);
-                    ctx.lineWidth = p.lineWidth;
-                    ctx.strokeStyle = p.color;
-                    ctx.stroke();
-                    ctx.globalAlpha = 1;
-                }
-                return p;
-            }
+          function createCircle(x, y) {
+              var p = {};
+              p.x = x;
+              p.y = y;
+              p.color = '#FFF';
+              p.radius = 0.1;
+              p.alpha = .5;
+              p.lineWidth = 6;
+              p.draw = function () {
+                  ctx.globalAlpha = p.alpha;
+                  ctx.beginPath();
+                  ctx.arc(p.x, p.y, p.radius, 0, 2 * Math.PI, true);
+                  ctx.lineWidth = p.lineWidth;
+                  ctx.strokeStyle = p.color;
+                  ctx.stroke();
+                  ctx.globalAlpha = 1;
+              }
+              return p;
+          }
 
-            function renderParticule(anim) {
-                for (var i = 0; i < anim.animatables.length; i++) {
-                    anim.animatables[i].target.draw();
-                }
-            }
+          function renderParticule(anim) {
+              for (var i = 0; i < anim.animatables.length; i++) {
+                  anim.animatables[i].target.draw();
+              }
+          }
 
-            function animateParticules(x, y) {
-                var circle = createCircle(x, y);
-                var particules = [];
-                for (var i = 0; i < numberOfParticules; i++) {
-                    particules.push(createParticule(x, y));
-                }
+          function animateParticules(x, y) {
+              var circle = createCircle(x, y);
+              var particules = [];
+              for (var i = 0; i < numberOfParticules; i++) {
+                  particules.push(createParticule(x, y));
+              }
 
-                anime.timeline().add({
-                    targets: particules,
-                    x: function (p) {
-                        return p.endPos.x;
-                    },
-                    y: function (p) {
-                        return p.endPos.y;
-                    },
-                    radius: 0.1,
-                    duration: anime.random(1200, 1800),
-                    easing: 'easeOutExpo',
-                    update: renderParticule
-                })
-                        .add({
-                            targets: circle,
-                            radius: anime.random(80, 160),
-                            lineWidth: 0,
-                            alpha: {
-                                value: 0,
-                                easing: 'linear',
-                                duration: anime.random(600, 800),
-                            },
-                            duration: anime.random(1200, 1800),
-                            easing: 'easeOutExpo',
-                            update: renderParticule
-                        }, 0);
-            }
+              anime.timeline().add({
+                  targets: particules,
+                  x: function (p) {
+                      return p.endPos.x;
+                  },
+                  y: function (p) {
+                      return p.endPos.y;
+                  },
+                  radius: 0.1,
+                  duration: anime.random(1200, 1800),
+                  easing: 'easeOutExpo',
+                  update: renderParticule
+              })
+                      .add({
+                          targets: circle,
+                          radius: anime.random(80, 160),
+                          lineWidth: 0,
+                          alpha: {
+                              value: 0,
+                              easing: 'linear',
+                              duration: anime.random(600, 800),
+                          },
+                          duration: anime.random(1200, 1800),
+                          easing: 'easeOutExpo',
+                          update: renderParticule
+                      }, 0);
+          }
 
-            var render = anime({
-                duration: Infinity,
-                update: function () {
-                    ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
-                }
-            });
+          var render = anime({
+              duration: Infinity,
+              update: function () {
+                  ctx.clearRect(0, 0, canvasEl.width, canvasEl.height);
+              }
+          });
 
-            document.addEventListener(tap, function (e) {
-                window.human = true;
-                render.play();
-                updateCoords(e);
-                animateParticules(pointerX, pointerY);
-            }, false);
+          document.addEventListener(tap, function (e) {
+              window.human = true;
+              render.play();
+              updateCoords(e);
+              animateParticules(pointerX, pointerY);
+          }, false);
 
-            setCanvasSize();
-            window.addEventListener('resize', setCanvasSize, false);
-        });
+          setCanvasSize();
+          window.addEventListener('resize', setCanvasSize, false);
+      });
 
-        // 創建角度顯示卡片
         function createAngleCards(angles) {
-            angleContainer.innerHTML = '';
+             const angleContainer = document.getElementById('angleContainer');
+             angleContainer.innerHTML = '';
             for (const [angleName, angleValue] of Object.entries(angles)) {
                 const card = document.createElement('div');
                 card.className = 'angle-card';
@@ -540,11 +513,11 @@
                     <div class="angle-value">${angleValue.toFixed(1)}°</div>
                 `;
                 angleContainer.appendChild(card);
-            }
-        }
+             }
+         }
 
-        // 更新角度值
         function updateAngleCards(angles) {
+            const angleContainer = document.getElementById('angleContainer');
             for (const [angleName, angleValue] of Object.entries(angles)) {
                 const card = document.getElementById(`angle-${angleName}`);
                 if (card) {
@@ -562,31 +535,26 @@
             }
         }
 
-        // 監聽影片時間更新事件
-        video.addEventListener('timeupdate', () => {
-            const currentTime = video.currentTime;
-            const fps = 30; // 假設 30fps，根據實際情況調整
-            const frameIndex = Math.floor(currentTime * fps);
+        const video = document.getElementById('processedVideo');
+        const angleContainer = document.getElementById('angleContainer');
+        const detectionInfo =  {{ detection_info | safe }};
+        const fps = {{ fps }};
 
-            if (detectionInfo[frameIndex] && detectionInfo[frameIndex].angles) {
-                const angles = detectionInfo[frameIndex].angles;
-
-                // 如果是第一幀，創建卡片
-                if (frameIndex === 0) {
-                    createAngleCards(angles);
-                }
-
-                // 更新角度值
-                updateAngleCards(angles);
-            }
-        });
-
-        // 影片載入時創建初始卡片
         video.addEventListener('loadeddata', () => {
-            if (detectionInfo[0] && detectionInfo[0].angles) {
-                createAngleCards(detectionInfo[0].angles);
-            }
-        });
+          if (detectionInfo.length > 0 && detectionInfo[0].angles) {
+               createAngleCards(detectionInfo[0].angles);
+             video.addEventListener('timeupdate', () => {
+                const currentTime = video.currentTime;
+                const frameIndex = Math.floor(currentTime * fps);
+
+                if (detectionInfo[frameIndex] && detectionInfo[frameIndex].angles) {
+                 const angles = detectionInfo[frameIndex].angles;
+                 updateAngleCards(angles);
+               }
+            });
+          }
+      });
+
     </script>
 </body>
 </html>
