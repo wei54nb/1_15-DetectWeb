@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <title>NKUST - 即時動作分析</title>
+    <style>
+
+
+        .logo-container img {
+            height: 80px; /* 調整圖片高度 */
+            width: auto;  /* 保持圖片比例 */
+        }
+
+        .button {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            color: #fff;
+            text-transform: uppercase;
+            font-size: 1rem;
+            letter-spacing: 0.15rem;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+            text-align: center;
+            background-color: #00BCD4;
+            text-decoration: none; /* 去掉 a 的預設下劃線樣式 */
+            cursor: pointer; /* 統一鼠標樣式 */
+            border: none; /* 去掉 button 的預設邊框樣式 */
+            min-width: 60px; /* 設定最小寬度 */
+        }
+
+        .button:after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #00BCD4;
+            border-radius: 0.5rem;
+            z-index: -2;
+        }
+
+        .button:before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0%;
+            height: 100%;
+            background-color: #0088cc;
+            transition: all 0.3s;
+            border-radius: 0.5rem;
+            z-index: -1;
+        }
+
+        .button:hover {
+            color: #fff;
+        }
+
+        .button:hover:before {
+            width: 100%;
+        }
+
+
+        /* optional reset for presentation */
+        * {
+            font-family: Arial, sans-serif;
+            text-decoration: none;
+            font-size: 20px;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #fff;
+            padding: 10px 20px;
+            border-bottom: 2px solid #00BCD4;
+            height: 150px;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 30px; /* 圖片與文字之間的距離 */
+        }
+
+
+
+
+        .logo-container span {
+            font-size: 2rem; /* 增加字體大小 */
+            font-weight: bold; /* 讓文字更醒目 */
+            color: #000; /* 文字顏色 */
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 90px;
+        }
+
+        .nav-buttons button {
+            background-color: #00BCD4;
+            color: #fff;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .nav-buttons button:hover {
+            background-color: #0097a7;
+        }
+
+        .menu {
+            position: relative;
+        }
+
+        .menu-button {
+            background-color: #00BCD4;
+            color: #fff;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 200px; /* 設置按鈕寬度 */
+            height: 60px; /* 設置按鈕高度 */
+        }
+
+        .menu-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            z-index: 10;
+            width: 200px;
+        }
+
+        .menu-dropdown button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            text-align: left;
+            background: none;
+            border: none;
+            cursor: pointer;
+        }
+
+        .menu-dropdown button:hover {
+            background-color: #f4f4f4;
+        }
+
+        .menu:hover .menu-dropdown {
+            display: block;
+        }
+
+        .content {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        .box {
+            background-color: #777;
+            color: #fff;
+            text-align: center;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .box-large {
+            width: 50%;
+            height: 700px;
+        }
+
+        .box-medium {
+            width: 20%;
+            height: 700px;
+        }
+
+        .box-small {
+            width: 20%;
+            height: 700px;
+        }
+
+
+        .restart-button {
+            background-color: #00BCD4;
+            color: #fff;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            text-align: center;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+
+        .restart-button:hover {
+            background-color: #0097a7;
+        }
+
+        .video-container {
+            width: 560px;
+            height: 560px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #000;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .video-container img {
+            width: 560px;
+            height: 560px;
+            object-fit: cover;
+        }
+
+        .video-container video {
+            max-width: 560px;
+            max-height: 560px;
+        }
+
+        .angle-display {
+            padding: 20px;
+            color: white;
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        .angle-title {
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-align: center;
+            color: #00BCD4;
+        }
+
+        .angle-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            padding: 10px;
+        }
+
+        .angle-card {
+            background-color: rgba(0, 188, 212, 0.1);
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .angle-label {
+            font-size: 16px;
+            color: #00BCD4;
+            margin-bottom: 5px;
+        }
+
+        .angle-value {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        /* 添加動畫效果 */
+        @keyframes highlight {
+            0% {
+                background-color: rgba(0, 188, 212, 0.1);
+            }
+            50% {
+                background-color: rgba(0, 188, 212, 0.3);
+            }
+            100% {
+                background-color: rgba(0, 188, 212, 0.1);
+            }
+        }
+
+        .angle-update {
+            animation: highlight 0.5s ease-in-out;
+        }
+
+        .fireworks {
+            left: 0;
+            pointer-events: none;
+            position: fixed;
+            top: 0;
+            z-index: 9999;
+        }
+
+        .exercise-counter {
+            background-color: #00BCD4;
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .counter-value {
+            font-size: 48px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+
+        .counter-label {
+            font-size: 24px;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+
+        .hp-bar {
+            position: absolute;
+            top: 70%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: red;
+            color: white;
+            padding: 10px;
+            font-size: 24px;
+            border-radius: 10px;
+        }
+
+        .damage-text {
+            position: absolute;
+            font-size: 24px;
+            font-weight: bold;
+            color: red;
+            transition: all 0.8s ease-out;
+            opacity: 1;
+        }
+
+
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo-container">
+            <img src="{{ url_for('static', filename='img/nkust.png') }}" alt="NKUST Logo">
+            <span>國立高雄科技大學</span>
+        </div>
+        <div class="nav-buttons">
+            <a href="{{ url_for('index') }}" class="button">回首頁</a>
+            <button class="button">動作知識</button>
+            <button class="button">器材介紹</button>
+        </div>
+    </div>
+
+    <div class="content">
+        <div class="video-container">
+            <img id="video-feed" src="{{ url_for('video_feed') }}" alt="Real-time Video Feed">
+        </div>
+
+        <div class="hp-bar" style="
+            position: fixed;
+            top: 30%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(to right, #ff0000, #ff6b6b);
+            padding: 15px 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+            z-index: 1000;
+        ">
+            <div class="hp-label" style="font-size: 18px; margin-bottom: 5px;">怪物血量</div>
+            <div class="hp-value" id="monster-hp" style="
+                font-size: 24px;
+                font-weight: bold;
+                text-align: center;
+            ">100</div>
+        </div>
+
+        <div class="data-container">
+            <h2>即時數據</h2>
+
+            <div class="exercise-counter">
+                <div class="counter-label">運動次數</div>
+                <div class="counter-value" id="exercise-count">0</div>
+            </div>
+
+            <div class="control-panel">
+                <select id="exercise-type" class="exercise-selector">
+                    <option value="squat">深蹲訓練</option>
+                    <option value="bicep-curl">二頭訓練</option>
+                    <option value="shoulder-press">肩推訓練</option>
+                    <option value="push-up">伏地挺身</option>
+                </select>
+                <button id="start-detection" class="button">開始偵測</button>
+                <button id="stop-detection" class="button">停止偵測</button>
+            </div>
+            <div class="angle-display">
+                <!-- 角度數據將在這裡動態更新 -->
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const startButton = document.getElementById('start-detection');
+        const stopButton = document.getElementById('stop-detection');
+        const exerciseSelect = document.getElementById('exercise-type');
+        const videoFeed = document.getElementById('video-feed');
+        const exerciseCount = document.getElementById('exercise-count');
+
+        socket.on('exercise_count_update', function(data) {
+            exerciseCount.textContent = data.count;
+        });
+
+        // 監聽角度數據並更新到前端
+        socket.on('angle_data', function (data) {
+            console.log("Received angle data:", data); // 用於除錯
+            let angleDisplay = document.querySelector('.angle-display');
+            angleDisplay.innerHTML = ""; // 清空舊數據
+
+            for (let key in data) {
+                let angleElement = document.createElement("div");
+                angleElement.classList.add("angle-card");
+                angleElement.innerHTML = `<div class="angle-label">${key}</div>
+                                  <div class="angle-value">${data[key].toFixed(1)}°</div>`;
+                angleDisplay.appendChild(angleElement);
+            }
+        });
+
+        startButton.addEventListener('click', () => {
+            const exerciseType = exerciseSelect.value;
+            fetch(`/start_detection?exercise_type=${exerciseType}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    startButton.disabled = true;
+                    stopButton.disabled = false;
+                    exerciseCount.textContent = '0';
+                    videoFeed.src = `/video_feed?t=${new Date().getTime()}`;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('啟動偵測失敗，請檢查攝像頭連接');
+            });
+        });
+
+        stopButton.addEventListener('click', () => {
+            fetch('/stop_detection', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+            })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            startButton.disabled = false;
+                            stopButton.disabled = true;
+                            // 停止視訊串流
+                            videoFeed.src = '';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+        });
+
+
+        let scene, camera, renderer;
+        let monster;
+        let monsterHP = 100;
+        const monsterMaxHP = 100;
+        let floatingSpeed = 0.005;
+        let startY = 0; // 調整初始Y軸位置
+
+        function init() {
+            // 創建場景
+            scene = new THREE.Scene();
+            scene.background = null; // 確保背景透明
+
+            // 設置相機
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 0, 5); // 調整相機位置
+            camera.lookAt(0, 0, 0);
+
+            // 設置渲染器
+            renderer = new THREE.WebGLRenderer({
+                alpha: true,
+                antialias: true
+            });
+            renderer.setSize(window.innerWidth / 2, window.innerHeight / 2); // 調整渲染大小
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setClearColor(0x000000, 0); // 設置透明背景
+
+            // 將渲染器添加到特定容器中
+            const container = document.createElement('div');
+            container.style.position = 'absolute';
+            container.style.top = '50%';
+            container.style.left = '50%';
+            container.style.transform = 'translate(-50%, -50%)';
+            container.style.zIndex = '1';
+            document.body.appendChild(container);
+            container.appendChild(renderer.domElement);
+
+            // 添加光源
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLight.position.set(5, 5, 5);
+            scene.add(directionalLight);
+
+            // 載入模型
+            const loader = new THREE.GLTFLoader();
+            loader.load(
+                    '/static/models/1.glb',
+                    function (gltf) {
+                        monster = gltf.scene;
+                        monster.scale.set(1.5, 1.5, 1.5); // 增加模型大小
+                        monster.position.set(0, startY, 0);
+
+                        // 確保模型面向相機
+                        monster.rotation.y = Math.PI;
+
+                        scene.add(monster);
+                        console.log("✅ 怪物模型載入成功！");
+                    },
+                    function (progress) {
+                        console.log('載入進度:', (progress.loaded / progress.total * 100) + '%');
+                    },
+                    function (error) {
+                        console.error("❌ 怪物模型載入失敗！", error);
+                    }
+            );
+
+            // 添加窗口大小調整監聽器
+            window.addEventListener('resize', onWindowResize, false);
+        }
+
+        // 修改更新血量顯示的函數
+        function updateHPDisplay() {
+            const hpElement = document.getElementById('monster-hp');
+            if (hpElement) {
+                hpElement.textContent = Math.max(0, monsterHP);
+                // 添加血量變化的視覺效果
+                hpElement.style.animation = 'pulse 0.5s ease-in-out';
+                setTimeout(() => {
+                    hpElement.style.animation = '';
+                }, 500);
+            }
+        }
+
+        // 修改顯示傷害數字的函數
+        function showDamageText(damage) {
+            const damageText = document.createElement('div');
+            damageText.className = 'damage-text';
+            damageText.textContent = `-${damage}`;
+            damageText.style.position = 'fixed';
+            damageText.style.zIndex = '1001';
+
+            // 設置初始位置（在怪物血條附近）
+            const randomX = Math.random() * 100 - 50;
+            const randomY = Math.random() * 50;
+            damageText.style.left = `calc(50% + ${randomX}px)`;
+            damageText.style.top = `calc(80px + ${randomY}px)`;
+
+            // 添加樣式
+            damageText.style.color = '#ff0000';
+            damageText.style.fontWeight = 'bold';
+            damageText.style.fontSize = '24px';
+            damageText.style.textShadow = '2px 2px 4px rgba(0,0,0,0.5)';
+
+            document.body.appendChild(damageText);
+
+            // 添加動畫
+            requestAnimationFrame(() => {
+                damageText.style.transition = 'all 1s ease-out';
+                damageText.style.transform = 'translateY(-100px)';
+                damageText.style.opacity = '0';
+            });
+
+            // 移除元素
+            setTimeout(() => {
+                damageText.remove();
+            }, 1000);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth / 2, window.innerHeight / 2);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (monster) {
+                // 上下浮動動畫
+                monster.position.y = startY + Math.sin(Date.now() * 0.001) * 0.2;
+                // 緩慢旋轉
+                monster.rotation.y += 0.005;
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        // 怪物受傷效果
+        function monsterHitEffect() {
+            if (!monster) return;
+
+            monster.traverse((child) => {
+                if (child.isMesh && child.material) {
+                    // 保存原始顏色
+                    const originalColor = child.material.color.clone();
+
+                    // 設置為紅色
+                    child.material.color.setRGB(1, 0, 0);
+
+                    // 恢復原始顏色
+                    setTimeout(() => {
+                        child.material.color.copy(originalColor);
+                    }, 200);
+                }
+            });
+        }
+
+        // 修改怪物受傷效果的監聽器
+        socket.on('exercise_count_update', function (data) {
+            exerciseCount.textContent = data.count;
+
+            if (monsterHP > 0) {
+                const damage = 10;
+                monsterHP = Math.max(0, monsterHP - damage);
+
+                // 更新血量顯示
+                updateHPDisplay();
+
+                // 顯示傷害數字
+                showDamageText(damage);
+
+                // 觸發怪物受傷效果
+                monsterHitEffect();
+
+                // 檢查怪物是否死亡
+                if (monsterHP <= 0) {
+                    if (monster) {
+                        monster.visible = false;
+                        // 可以添加死亡提示
+                        alert('恭喜擊敗怪物！');
+                    }
+                }
+            }
+        });
+
+        const style = document.createElement('style');
+        style.textContent = `
+                @keyframes pulse {
+                    0% { transform: scale(1); }
+                    50% { transform: scale(1.2); }
+                    100% { transform: scale(1); }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // 初始化場景
+        init();
+        updateHPDisplay();
+        // 開始動畫循環
+        animate();
+    </script>
+</body>
+</html>

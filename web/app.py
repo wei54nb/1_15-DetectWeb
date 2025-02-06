@@ -1,4 +1,7 @@
-from flask import Flask, request, render_template, redirect, url_for, send_from_directory
+from flask import Flask, request, render_template, redirect, url_for, send_from_directory, Response, jsonify
+from flask_socketio import SocketIO
+import eventlet
+import eventlet.wsgi
 import os
 import cv2
 import numpy as np
@@ -7,69 +10,82 @@ from ultralytics import YOLO
 import mediapipe as mp
 from werkzeug.utils import secure_filename
 import torch
-import torchvision.transforms as T
-import subprocess
+import queue
+import threading
+import time
 
+eventlet.monkey_patch()  # 這行確保 socketIO 可以正確使用 eventlet
 app = Flask(__name__, static_folder='static')
+socketio = SocketIO(app, async_mode='eventlet', cors_allowed_origins="*")
+
+# 全局變數用於控制偵測狀態
+detection_active = False
+current_exercise_type = 'squat'
+frame_buffer = queue.Queue(maxsize=2)
+processed_frame_buffer = queue.Queue(maxsize=2)
+
+#計算次數
+exercise_count = 0
+last_pose = None
+mid_pose_detected = False
+
+
+# 日誌設定
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Initialize MediaPipe
+# MediaPipe 設定
 mp_drawing = mp.solutions.drawing_utils
 mp_pose = mp.solutions.pose
 mp_drawing_styles = mp.solutions.drawing_styles
 
-# Configuration
+# 文件儲存
 UPLOAD_FOLDER = 'uploads'
 OUTPUT_FOLDER = 'output'
 ALLOWED_EXTENSIONS = {'mp4', 'avi', 'mov'}
 
+# 模型位置
 MODEL_PATHS = {
     'squat': 'D:\\project_Main\\modles\\yolov8_squat_model\\weights\\best.pt',
-    'bicep-curl': 'D:\\project_Main\\modles\\yolov8_bicep_model2\\weights\\best.pt',
+    'bicep-curl': 'D:\\project_Main\\modles\\best.pt',
     'shoulder-press': 'D:\\project_Main\\modles\\yolov8_shoulder_model\\weights\\best.pt',
-    'push-up':'D:\\project_Main\\modles\\push-up_model\\weights\\pushup_best.pt'
+    'push-up': 'D:\\project_Main\\modles\\push-up_model\\weights\\pushup_best.pt'
 }
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['OUTPUT_FOLDER'] = OUTPUT_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
-# Load models
+# 加載模型
 models = {}
 for exercise_type, model_path in MODEL_PATHS.items():
     try:
-        models[exercise_type] = YOLO(model_path).to('cuda')
-        logger.info(f"YOLO model for {exercise_type} loaded successfully on GPU")
+        model = YOLO(model_path).to('cuda')
+        models[exercise_type] = model
+        logger.info(f" YOLO model for {exercise_type} loaded successfully on GPU")
+
+        # 紀錄模型的類別
+        logger.info(f" {exercise_type} 模型類別: {model.names}")
+
     except Exception as e:
-        logger.error(f"Error loading YOLO model for {exercise_type}: {e}")
+        logger.error(f" Error loading YOLO model for {exercise_type}: {e}")
 
-
+# 工具函數
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-
 def calculate_angle(a, b, c):
-    """Calculate angle between three points"""
     a = np.array(a)
     b = np.array(b)
     c = np.array(c)
-
     radians = np.arctan2(c[1] - b[1], c[0] - b[0]) - np.arctan2(a[1] - b[1], a[0] - b[0])
     angle = np.abs(radians * 180.0 / np.pi)
-
-    if angle > 180.0:
-        angle = 360 - angle
-
-    return angle
+    return angle if angle <= 180.0 else 360 - angle
 
 
 def get_exercise_angles(landmarks):
-    """Calculate all major body angles"""
     angles = {}
-
     try:
-        # Calculate angles for major body joints
         left_shoulder = [landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value].x,
                          landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value].y]
         left_elbow = [landmarks[mp_pose.PoseLandmark.LEFT_ELBOW.value].x,
@@ -132,266 +148,259 @@ def get_exercise_angles(landmarks):
         right_knee = [landmarks[mp_pose.PoseLandmark.RIGHT_KNEE.value].x,
                       landmarks[mp_pose.PoseLandmark.RIGHT_KNEE.value].y]
         angles['右髖部'] = calculate_angle(right_shoulder, right_hip, right_knee)
+
     except Exception as e:
         logger.error(f"Error calculating angles: {e}")
 
     return angles
 
 
-def process_video(input_video_path, output_video_path, exercise_type):
+def process_frame_realtime(frame, exercise_type):
+    global exercise_count, last_pose, mid_pose_detected
 
-    detection_info = []  # Initialize outside the try block
-    frame_count = 0
-    cap = cv2.VideoCapture(input_video_path)
-    if not cap.isOpened():
-        raise Exception(f"Error opening video file {input_video_path}")
-
-    frame_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    frame_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    fps = int(cap.get(cv2.CAP_PROP_FPS))
-    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-
-    fourcc = cv2.VideoWriter_fourcc(*'avc1')  # Use avc1 codec for H.264
-    out = None
     try:
-        out = cv2.VideoWriter(output_video_path, fourcc, fps, (frame_width, frame_height))
-        if not out.isOpened():
-            raise Exception(f"Error creating video writer for {output_video_path}")
-        detection_info = []
+        frame = cv2.resize(frame, (360, 360))
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        annotated_frame = frame.copy()
+        model = models.get(exercise_type)
 
-        with mp_pose.Pose(
-                min_detection_confidence=0.5,
-                min_tracking_confidence=0.5) as pose:
+        if model:
+            results_yolo = model(frame, conf=0.3)
 
-            model = models.get(exercise_type)
-            if model is None:
-                raise Exception(f"Model for {exercise_type} not found")
+            if len(results_yolo[0].boxes) > 0:
+                best_box = results_yolo[0].boxes[0]
+                x1, y1, x2, y2 = map(int, best_box.xyxy[0].cpu().numpy())
+                conf = float(best_box.conf)
+                class_id = int(best_box.cls)
+                class_name = model.names[class_id]
 
-            frame_count = 0
-            while cap.isOpened():
-                ret, frame = cap.read()
-                if not ret:
-                    break
+                # 記錄 YOLO 偵測的動作
+                logger.info(f"[YOLO] Detected {class_name} with confidence {conf:.2f} in {exercise_type} mode")
 
-                try:
-                    frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                    results_yolo = model(frame, conf=0.25)
-                    annotated_frame = frame.copy()  # 使用原始帧的副本
+                # 繪製框框
+                cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 255, 0), 1)
+                label = f'{class_name} {conf:.2f}'
+                cv2.putText(annotated_frame, label, (x1, y1 - 10),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
+
+                # MediaPipe 姿勢偵測
+                with mp_pose.Pose(min_detection_confidence=0.3, min_tracking_confidence=0.3, model_complexity=0) as pose:
                     results_pose = pose.process(frame_rgb)
 
-                    frame_info = {
-                        'frame': frame_count,
-                        'angles': {}
-                    }
-
                     if results_pose.pose_landmarks:
-                        mp_drawing.draw_landmarks(
-                            annotated_frame,
-                            results_pose.pose_landmarks,
-                            mp_pose.POSE_CONNECTIONS,
-                            landmark_drawing_spec=mp_drawing_styles.get_default_pose_landmarks_style()
-                        )
-
                         landmarks = results_pose.pose_landmarks.landmark
                         angles = get_exercise_angles(landmarks)
 
-                        frame_info['angles'] = angles
+                        # 傳送角度數據到前端
+                        socketio.emit('angle_data', angles)
+                        logger.info(f"[Angle] Sent angles: {angles}")
 
-                    if len(results_yolo[0].boxes) > 0:
-                        for box in results_yolo[0].boxes:
-                            x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
-                            conf = float(box.conf)
-                            class_id = int(box.cls)
-                            class_name = model.names[class_id]
+                # **計數邏輯**
+                num_classes = len(model.names)  # 取得該模型的類別數量
 
-                            # 繪製邊界框
-                            cv2.rectangle(annotated_frame, (int(x1), int(y1)), (int(x2), int(y2)), (0, 255, 0), 2)
-                            # 添加標籤：類別名稱和置信度
-                            label = f'{class_name} {conf:.2f}'
-                            cv2.putText(annotated_frame, label, (int(x1), int(y1) - 10),
-                                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-                    detection_info.append(frame_info)
-                    out.write(annotated_frame)
-                    torch.cuda.empty_cache()
-                except Exception as e:
-                    logger.error(f"Error processing frame {frame_count}: {e}")
-                    if out:
-                      out.write(frame)
-                frame_count += 1
-                if frame_count % 30 == 0:
-                    logger.info(f"Processing frame {frame_count}/{total_frames}")
-        if out:
-            out.release()
-        cap.release()
-        torch.cuda.empty_cache()
-        logger.info(f"Video processing completed: {output_video_path}")
-        return detection_info, fps
+                if num_classes == 1:
+                    # 只有一個類別的情況（如 bicep-curl、shoulder-press）
+                    if class_id == 0:  # 確保是該動作
+                        exercise_count += 1
+                        logger.info(f"[Counter] {exercise_type} count updated: {exercise_count}")
+                        socketio.emit('exercise_count_update', {'count': exercise_count})
+
+                elif num_classes == 2:
+                    # 兩個類別的情況（如 squat, push-up）
+                    if last_pose is not None:
+                        if last_pose == 0 and class_id == 1:
+                            mid_pose_detected = True
+                        elif last_pose == 1 and class_id == 0 and mid_pose_detected:
+                            exercise_count += 1
+                            mid_pose_detected = False
+                            logger.info(f"[Counter] {exercise_type} count updated: {exercise_count}")
+                            socketio.emit('exercise_count_update', {'count': exercise_count})
+
+                    last_pose = class_id  # 更新上一個姿勢
+
+
+                # 在畫面上顯示運動次數
+                cv2.putText(annotated_frame,
+                            f'Count: {exercise_count}',
+                            (10, 30),
+                            cv2.FONT_HERSHEY_SIMPLEX,
+                            1,
+                            (0, 255, 0),
+                            2)
+
+        return annotated_frame
 
     except Exception as e:
-        logger.error(f"Error in process_video: {e}")
-        raise
+        logger.error(f"處理幀時發生錯誤: {e}")
+        return frame
 
 
+
+def video_capture_thread(camera_index=0):
+    cap = cv2.VideoCapture(camera_index)
+    if not cap.isOpened():
+        logger.error("無法開啟攝像頭")
+        return
+
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 360)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 360)
+    cap.set(cv2.CAP_PROP_FPS, 20)
+
+    while detection_active:
+        ret, frame = cap.read()
+        if not ret:
+            logger.error("無法讀取影像幀")
+            break
+        frame = cv2.resize(frame, (360, 360))
+
+        if not frame_buffer.full():
+            frame_buffer.put(frame)
+        else:
+            # 清空隊列避免延遲
+            try:
+                frame_buffer.get_nowait()
+            except queue.Empty:
+                pass
+            frame_buffer.put(frame)
+        time.sleep(0.01)
+
+    cap.release()
+    logger.info("攝像頭執行緒已正常停止")
+
+def frame_processing_thread(exercise_type='squat'):
+    while detection_active:
+        if not frame_buffer.empty():
+            frame = frame_buffer.get()
+            processed_frame = process_frame_realtime(frame, exercise_type)
+            if not processed_frame_buffer.full():
+                processed_frame_buffer.put(processed_frame)
+        time.sleep(0.001)
+    logger.info("畫面處理執行緒已停止")
+
+def generate_frames():
+    while True:
+        if not processed_frame_buffer.empty():
+            frame = processed_frame_buffer.get()
+            ret, buffer = cv2.imencode('.jpg', frame)
+            frame = buffer.tobytes()
+            yield (b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n')
+
+def cleanup_buffers():
+    """定期清理緩衝區"""
+    while True:
+        if frame_buffer.qsize() > 1:
+            try:
+                frame_buffer.get_nowait()
+            except queue.Empty:
+                pass
+        time.sleep(0.1)
+
+def check_thread_status():
+    """檢查執行序狀態"""
+    while True:
+        active_threads = threading.enumerate()
+        logger.info(f"Active threads: {[t.name for t in active_threads]}")
+        time.sleep(5)  # 每5秒檢查一次
+
+# 路由
 @app.route('/')
 def index():
     return render_template('index.html')
 
-
-@app.route('/upload', methods=['GET'])
-def upload_page():
-    return render_template('index.html')
-
-@app.route('/upload', methods=['POST'])
-def upload_file():
-    if request.method == 'POST':
-        if 'file' not in request.files:
-            logger.warning("No file part in request")
-            return redirect(url_for('index'))
-
-        file = request.files['file']
-        exercise_type = request.form.get('exercise', 'squat')
-
-        if file and allowed_file(file.filename):
-            try:
-                filename = secure_filename(file.filename)
-                input_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                output_filename = f"processed_{filename}"
-                output_path = os.path.join(app.config['OUTPUT_FOLDER'], output_filename)
-
-                file.save(input_path)
-                logger.info(f"File saved: {input_path}")
-
-                detection_info, fps = process_video(input_path, output_path, exercise_type)
-                logger.info(f"Video processed: {output_path}")
-
-                if not os.path.exists(output_path):
-                    logger.error(f"Output file not found: {output_path}")
-                    return "Error: Processed video not found", 500
-
-                torch.cuda.empty_cache()
-                return render_template('uploaded.html',
-                                       filename=output_filename,
-                                       detection_info=detection_info,
-                                       fps=fps)
-
-            except Exception as e:
-                torch.cuda.empty_cache()
-                logger.error(f"Error processing video: {e}")
-                return f"Error processing video: {str(e)}", 500
-
-        else:
-            logger.warning("Invalid file type")
-            return "Invalid file type", 400
-
-    return render_template('index.html')
+@app.route('/realtime')
+def realtime():
+    return render_template('realtime.html')
 
 
-@app.route('/uploads/<filename>')
-def uploaded_file(filename):
-    """處理影片串流"""
-    try:
-        file_path = os.path.join(app.config['OUTPUT_FOLDER'], filename)
-        logger.info(f"Attempting to stream file: {file_path}")
-
-        if not os.path.exists(file_path):
-            logger.error(f"File not found: {file_path}")
-            return "File not found", 404
-
-        # 添加正確的 MIME 類型
-        return send_from_directory(
-            app.config['OUTPUT_FOLDER'],
-            filename,
-            mimetype='video/mp4'
-        )
-
-    except Exception as e:
-        logger.error(f"Error streaming video: {e}")
-        return f"Error streaming video: {str(e)}", 500
-
-
-def partial_video_stream(file_path, start, end):
-    """分段讀取視頻文件"""
-    with open(file_path, 'rb') as video:
-        video.seek(start)
-        remaining = end - start + 1
-        while remaining:
-            chunk_size = min(8192, remaining)  # 8KB chunks
-            data = video.read(chunk_size)
-            if not data:
-                break
-            remaining -= len(data)
-            yield data
-
-
-def calculate_exercise_angles_mediapipe(landmarks, exercise_type):
-    """統一計算所有運動的關鍵角度（左右兩側）"""
-    angles = {}
+@app.route('/start_detection', methods=['POST'])
+def start_detection():
+    global detection_active, current_exercise_type, exercise_count, last_pose, mid_pose_detected
 
     try:
-        # 右側關鍵點
-        right_shoulder = np.array([landmarks[mp_pose.PoseLandmark.RIGHT_SHOULDER.value].x,
-                                   landmarks[mp_pose.PoseLandmark.RIGHT_SHOULDER.value].y])
-        right_elbow = np.array([landmarks[mp_pose.PoseLandmark.RIGHT_ELBOW.value].x,
-                                landmarks[mp_pose.PoseLandmark.RIGHT_ELBOW.value].y])
-        right_wrist = np.array([landmarks[mp_pose.PoseLandmark.RIGHT_WRIST.value].x,
-                                landmarks[mp_pose.PoseLandmark.RIGHT_WRIST.value].y])
-        right_hip = np.array([landmarks[mp_pose.PoseLandmark.RIGHT_HIP.value].x,
-                              landmarks[mp_pose.PoseLandmark.RIGHT_HIP.value].y])
-        right_knee = np.array([landmarks[mp_pose.PoseLandmark.RIGHT_KNEE.value].x,
-                               landmarks[mp_pose.PoseLandmark.RIGHT_KNEE.value].y])
-        right_ankle = np.array([landmarks[mp_pose.PoseLandmark.RIGHT_ANKLE.value].x,
-                                landmarks[mp_pose.PoseLandmark.RIGHT_ANKLE.value].y])
+        exercise_type = request.args.get('exercise_type', 'squat')  # 確保獲取前端的運動類型
+        if exercise_type not in models:
+            return jsonify({'success': False, 'error': '不支援的運動類型'}), 400
 
-        # 左側關鍵點
-        left_shoulder = np.array([landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value].x,
-                                  landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value].y])
-        left_elbow = np.array([landmarks[mp_pose.PoseLandmark.LEFT_ELBOW.value].x,
-                               landmarks[mp_pose.PoseLandmark.LEFT_ELBOW.value].y])
-        left_wrist = np.array([landmarks[mp_pose.PoseLandmark.LEFT_WRIST.value].x,
-                               landmarks[mp_pose.PoseLandmark.LEFT_WRIST.value].y])
-        left_hip = np.array([landmarks[mp_pose.PoseLandmark.LEFT_HIP.value].x,
-                             landmarks[mp_pose.PoseLandmark.LEFT_HIP.value].y])
-        left_knee = np.array([landmarks[mp_pose.PoseLandmark.LEFT_KNEE.value].x,
-                              landmarks[mp_pose.PoseLandmark.LEFT_KNEE.value].y])
-        left_ankle = np.array([landmarks[mp_pose.PoseLandmark.LEFT_ANKLE.value].x,
-                               landmarks[mp_pose.PoseLandmark.LEFT_ANKLE.value].y])
+        current_exercise_type = exercise_type
+        exercise_count = 0  # 重置計數器
+        last_pose = None
+        mid_pose_detected = False
 
-        # 計算右側角度
-        angles['right_shoulder'] = calculate_angle(right_elbow, right_shoulder, right_hip)
-        angles['right_elbow'] = calculate_angle(right_shoulder, right_elbow, right_wrist)
-        angles['right_hip'] = calculate_angle(right_shoulder, right_hip, right_knee)
-        angles['right_knee'] = calculate_angle(right_hip, right_knee, right_ankle)
+        if not detection_active:
+            detection_active = True
+            cap = cv2.VideoCapture(0)
+            if not cap.isOpened():
+                cap.release()
+                return jsonify({'success': False, 'error': '無法開啟攝像頭'}), 400
+            cap.release()
 
-        # 計算左側角度
-        angles['left_shoulder'] = calculate_angle(left_elbow, left_shoulder, left_hip)
-        angles['left_elbow'] = calculate_angle(left_shoulder, left_elbow, left_wrist)
-        angles['left_hip'] = calculate_angle(left_shoulder, left_hip, left_knee)
-        angles['left_knee'] = calculate_angle(left_hip, left_knee, left_ankle)
+            # 啟動執行緒
+            threads = [
+                threading.Thread(target=video_capture_thread, name="VideoCapture"),
+                threading.Thread(target=frame_processing_thread, args=(exercise_type,), name="FrameProcessing"),
+                threading.Thread(target=cleanup_buffers, daemon=True, name="BufferCleanup")
+            ]
+
+            for thread in threads:
+                thread.start()
+                logger.info(f"Started thread: {thread.name}")
+
+            logger.info(f"✅ 啟動 {exercise_type} 模型進行即時偵測")
+            return jsonify({'success': True})
 
     except Exception as e:
-        logger.error(f"Error calculating angles: {e}")
+        logger.error(f"啟動偵測時發生錯誤: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
-    return angles
+
+@app.route('/stop_detection', methods=['POST'])
+def stop_detection():
+    global detection_active
+    detection_active = False
+    logger.info("停止即時偵測執行緒")
+    return jsonify({'success': True})
+
+@app.route('/video_feed')
+def video_feed():
+    def generate():
+        while True:
+            if not processed_frame_buffer.empty():
+                frame = processed_frame_buffer.get()
+                if frame is not None:
+                    ret, buffer = cv2.imencode('.jpg', frame)
+                    if ret:
+                        frame_bytes = buffer.tobytes()
+                        yield (b'--frame\r\n'
+                               b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+            else:
+                time.sleep(0.01)
+
+    return Response(generate(),
+                   mimetype='multipart/x-mixed-replace; boundary=frame')
 
 
-def calculate_angle(p1, p2, p3):
-    """计算三个点形成的角度"""
-    # 将点转换为numpy数组
-    p1 = np.array(p1)
-    p2 = np.array(p2)
-    p3 = np.array(p3)
-
-    # 计算两个向量
-    v1 = p1 - p2
-    v2 = p3 - p2
-
-    # 计算角度（弧度）
-    cosine = np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2))
-    angle = np.arccos(np.clip(cosine, -1.0, 1.0))
-
-    # 转换为角度
-    return np.degrees(angle)
+@app.route('/static/models/<path:filename>')
+def serve_model(filename):
+    return send_from_directory('static/models', filename)
 
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+
+
+
+    # 確保必要的目錄存在
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    os.makedirs(app.config['OUTPUT_FOLDER'], exist_ok=True)
+    os.makedirs('static/models', exist_ok=True)
+
+    # 清空緩衝區
+    while not frame_buffer.empty():
+        frame_buffer.get()
+    while not processed_frame_buffer.empty():
+        processed_frame_buffer.get()
+
+    threading.Thread(target=check_thread_status,
+                    daemon=True,
+                    name="ThreadMonitor").start()
+
+    eventlet.wsgi.server(eventlet.listen(('0.0.0.0', 5000)), app)
