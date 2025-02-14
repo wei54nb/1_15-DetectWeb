@@ -5,7 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NKUST - 動作分析展示</title>
     <style>
-        /* 新增的按鈕格式 */
+        /* =============================
+           1. 全局重置與基本設定
+           ============================= */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+            text-decoration: none;
+            font-size: 20px; /* 若需調整整體字體大小可修改此處 */
+        }
+
+        body {
+            background-color: #f4f4f4;
+        }
+
+        /* =============================
+           2. 按鈕樣式
+           ============================= */
         .button {
             display: inline-block;
             padding: 0.75rem 1.5rem;
@@ -20,9 +38,9 @@
             z-index: 1;
             text-align: center;
             background-color: #00BCD4;
-            text-decoration: none; /* 去掉 a 的預設下劃線樣式 */
-            cursor: pointer; /* 統一鼠標樣式 */
-            border: none; /* 去掉 button 的預設邊框樣式 */
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
             min-width: 60px; /* 設定最小寬度 */
         }
 
@@ -59,19 +77,9 @@
             width: 100%;
         }
 
-
-        /* optional reset for presentation */
-        * {
-            font-family: Arial, sans-serif;
-            text-decoration: none;
-            font-size: 20px;
-        }
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-        }
-
+        /* =============================
+           3. 頂部區塊 (Header)
+           ============================= */
         .header {
             display: flex;
             justify-content: space-between;
@@ -93,44 +101,41 @@
         }
 
         .logo-container span {
-            font-size: 2rem; /* 增加字體大小 */
-            font-weight: bold; /* 讓文字更醒目 */
-            color: #000; /* 文字顏色 */
+            font-size: 2rem;
+            font-weight: bold;
+            color: #000;
         }
 
+        /* =============================
+           4. 導覽按鈕 (Nav Buttons)
+           ============================= */
         .nav-buttons {
             display: flex;
             gap: 90px;
         }
 
-        .nav-buttons button {
-            background-color: #00BCD4;
-            color: #fff;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
+        .nav-buttons .button {
+            margin: 5px 0;
         }
 
-        .nav-buttons button:hover {
-            background-color: #0097a7;
-        }
-
+        /* =============================
+           5. 選單 (Menu)
+           ============================= */
         .menu {
             position: relative;
         }
 
-        .menu-button {
-             background-color: #00BCD4;
+        .menu-button,
+        .menu > .button {
+            background-color: #00BCD4;
             color: #fff;
             padding: 10px 15px;
             border: none;
             border-radius: 5px;
             cursor: pointer;
             font-size: 16px;
-            width: 200px; /* 設置按鈕寬度 */
-            height: 60px; /* 設置按鈕高度 */
+            width: 200px;
+            height: 60px;
         }
 
         .menu-dropdown {
@@ -164,6 +169,9 @@
             display: block;
         }
 
+        /* =============================
+           6. 主要內容區 (Content)
+           ============================= */
         .content {
             display: flex;
             justify-content: space-between;
@@ -172,7 +180,10 @@
             gap: 20px;
         }
 
-         .box {
+        /* =============================
+           7. 盒子 (Box) 及其大小
+           ============================= */
+        .box {
             background-color: #777;
             color: #fff;
             text-align: center;
@@ -197,7 +208,9 @@
             height: 700px;
         }
 
-
+        /* =============================
+           8. 重新開始按鈕 (Restart Button)
+           ============================= */
         .restart-button {
             background-color: #00BCD4;
             color: #fff;
@@ -214,7 +227,10 @@
             background-color: #0097a7;
         }
 
-         .video-container {
+        /* =============================
+           9. 視訊容器 (Video Container)
+           ============================= */
+        .video-container {
             width: 100%;
             height: 100%;
             display: flex;
@@ -230,6 +246,9 @@
             max-height: 100%;
         }
 
+        /* =============================
+           10. 角度數據 (Angle Display)
+           ============================= */
         .angle-display {
             padding: 20px;
             color: white;
@@ -269,7 +288,7 @@
             font-weight: bold;
         }
 
-        /* 添加動畫效果 */
+        /* 角度更新時的動畫效果 */
         @keyframes highlight {
             0% {
                 background-color: rgba(0, 188, 212, 0.1);
@@ -286,12 +305,75 @@
             animation: highlight 0.5s ease-in-out;
         }
 
+        /* =============================
+           11. 煙火特效 (Fireworks Canvas)
+           ============================= */
         .fireworks {
-            left: 0;
-            pointer-events: none;
             position: fixed;
             top: 0;
+            left: 0;
+            pointer-events: none;
             z-index: 9999;
+        }
+
+        /* =============================
+           12. 媒體查詢 (RWD)
+           ============================= */
+        /* 平板與較小裝置 (<= 1024px) */
+        @media (max-width: 1024px) {
+            .nav-buttons {
+                gap: 20px;
+            }
+        }
+
+        /* 手機裝置 (<= 768px) */
+        @media (max-width: 768px) {
+            /* Header 調整 */
+            .header {
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+                height: auto;
+            }
+
+            .logo-container {
+                gap: 15px;
+                margin-bottom: 10px;
+            }
+
+            .logo-container img {
+                height: 40px;
+            }
+
+            .logo-container span {
+                font-size: 1.5rem;
+            }
+
+            /* 導覽按鈕改為直式排列 */
+            .nav-buttons {
+                flex-direction: column;
+                gap: 10px;
+                width: 100%;
+                align-items: center;
+            }
+
+            .content {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            /* 盒子在手機時自動佔滿寬度，高度自適應 */
+            .box-large,
+            .box-medium,
+            .box-small {
+                width: 90%;
+                height: auto;
+            }
+
+            /* 若要最終那個「重新開始」按鈕也在中間，可以加上 */
+            .content[style] {
+                justify-content: center !important;
+            }
         }
     </style>
      <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
@@ -318,6 +400,7 @@
                 <button onclick="showUploadForm('bicep-curl')">二頭訓練</button>
                 <button onclick="showUploadForm('shoulder-press')">肩推訓練</button>
                 <button onclick="showUploadForm('push-up')">伏地挺身</button>
+                <button onclick="showUploadForm('pull-up')">引體向上</button>
             </div>
         </div>
     </div>

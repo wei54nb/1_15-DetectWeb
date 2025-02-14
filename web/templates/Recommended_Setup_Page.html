@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>推薦配置說明</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50">
+<div class="container mx-auto px-4 py-8 max-w-4xl">
+    <h1 class="text-3xl font-bold mb-8 text-gray-800">系統配置建議</h1>
+
+    <section class="mb-12">
+        <h2 class="text-2xl font-semibold mb-6 text-gray-700">1. 硬體配備</h2>
+
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h3 class="text-xl font-semibold mb-4 text-gray-600">CPU 需求</h3>
+            <ul class="list-disc pl-6 space-y-2">
+                <li>最低需求：Intel Core i5-8400 或 AMD Ryzen 5 2600</li>
+                <li>建議規格：Intel Core i7-9700K 或 AMD Ryzen 7 3700X 以上</li>
+            </ul>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h3 class="text-xl font-semibold mb-4 text-gray-600">GPU 需求</h3>
+            <ul class="list-disc pl-6 space-y-2">
+                <li>最低需求：NVIDIA GTX 1660 6GB</li>
+                <li>建議規格：NVIDIA RTX 3060 8GB 以上</li>
+                <li>備註：需支援CUDA</li>
+            </ul>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h3 class="text-xl font-semibold mb-4 text-gray-600">記憶體與儲存空間</h3>
+            <ul class="list-disc pl-6 space-y-2">
+                <li>RAM最低需求：16GB</li>
+                <li>RAM建議規格：32GB</li>
+                <li>儲存空間：至少 256GB SSD</li>
+            </ul>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h3 class="text-xl font-semibold mb-4 text-gray-600">其他硬體需求</h3>
+            <ul class="list-disc pl-6 space-y-2">
+                <li>網路連線：穩定的寬頻網路，上傳速度至少 5Mbps</li>
+                <li>相機規格：1080p/30fps 網路攝影機，建議使用 Logitech C920 或更高規格</li>
+            </ul>
+        </div>
+    </section>
+
+    <section class="mb-12">
+        <h2 class="text-2xl font-semibold mb-6 text-gray-700">2. 軟體需求</h2>
+
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h3 class="text-xl font-semibold mb-4 text-gray-600">基礎軟體環境</h3>
+            <ul class="list-disc pl-6 space-y-2">
+                <li>作業系統：Windows 10/11 64位元、Ubuntu 20.04 LTS 以上</li>
+                <li>Python版本：3.8 ~ 3.10</li>
+                <li>CUDA版本：11.7 或 12.1</li>
+                <li>PyTorch版本：2.0.0 以上（需與CUDA相容）</li>
+            </ul>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h3 class="text-xl font-semibold mb-4 text-gray-600">必要驅動程式</h3>
+            <ul class="list-disc pl-6 space-y-2">
+                <li>NVIDIA顯示卡驅動程式（支援CUDA）</li>
+                <li>相機驅動程式</li>
+                <li>Visual C++ Redistributable（Windows環境）</li>
+            </ul>
+        </div>
+    </section>
+
+    <section class="mb-12">
+        <h2 class="text-2xl font-semibold mb-6 text-gray-700">3. 環境設置</h2>
+
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+            <h3 class="text-xl font-semibold mb-4 text-gray-600">虛擬環境設置</h3>
+            <div class="bg-gray-100 p-4 rounded-lg mb-4">
+                <code class="text-sm">
+                    python -m venv venv<br>
+                    source venv/bin/activate # Linux/Mac<br>
+                    venv\Scripts\activate # Windows
+                </code>
+            </div>
+            <p class="mb-4">建議套件安裝順序：</p>
+            <ol class="list-decimal pl-6 space-y-2">
+                <li>CUDA Toolkit</li>
+                <li>PyTorch</li>
+                <li>其他依賴套件</li>
+            </ol>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h3 class="text-xl font-semibold mb-4 text-gray-600">環境變數設定</h3>
+            <ul class="list-disc pl-6 space-y-2">
+                <li>CUDA_HOME 設定</li>
+                <li>PATH 變數更新</li>
+                <li>Python 環境變數</li>
+            </ul>
+        </div>
+    </section>
+
+    <section class="mb-12">
+        <h2 class="text-2xl font-semibold mb-6 text-gray-700">4. 其他建議</h2>
+
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <h3 class="text-xl font-semibold mb-4 text-gray-600">使用環境建議</h3>
+            <ul class="list-disc pl-6 space-y-2">
+                <li>相機擺放：建議高度1.5-1.8公尺，與使用者保持2-3公尺距離</li>
+                <li>光線需求：充足且均勻的照明，避免逆光</li>
+                <li>運動空間：建議預留至少2x2公尺的活動空間</li>
+                <li>背景建議：單色且無雜物的背景</li>
+            </ul>
+        </div>
+    </section>
+</div>
+</body>
+</html>

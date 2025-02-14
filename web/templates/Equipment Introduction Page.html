@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>健身器材介紹</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50">
+<div class="container mx-auto px-4 py-8 max-w-4xl">
+    <h1 class="text-3xl font-bold mb-8 text-gray-800">健身器材介紹</h1>
+
+    <!-- 基礎器材 -->
+    <section class="mb-12">
+        <h2 class="text-2xl font-semibold mb-6 text-gray-700">基礎器材</h2>
+
+        <!-- 啞鈴 -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6 flex flex-col md:flex-row items-center gap-6">
+            <img src="{{ url_for('static', filename='img/啞鈴介紹.png') }}" alt="啞鈴"
+                 style="width:220px; height:220px;" class="object-cover rounded">
+            <div>
+                <h3 class="text-xl font-semibold mb-4 text-gray-600">啞鈴</h3>
+                <p class="text-gray-600 mb-2">最基本且實用的重量訓練器材。</p>
+                <ul class="list-disc pl-6 space-y-2 text-gray-600">
+                    <li>可調式啞鈴：方便調整重量</li>
+                    <li>固定式啞鈴：重量固定，品質穩定</li>
+                    <li>適合初學者入門使用</li>
+                    <li>可進行多樣化訓練</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 彈力帶 -->
+        <div class="bg-white rounded-lg shadow-md p-6 flex flex-col md:flex-row items-center gap-6">
+            <img src="{{ url_for('static', filename='img/彈力帶介紹.png') }}" alt="彈力帶"
+                 style="width:220px; height:220px;" class="object-cover rounded">
+            <div>
+                <h3 class="text-xl font-semibold mb-4 text-gray-600">彈力帶</h3>
+                <p class="text-gray-600 mb-2">便攜、多功能的阻力訓練器材。</p>
+                <ul class="list-disc pl-6 space-y-2 text-gray-600">
+                    <li>不同顏色代表不同阻力</li>
+                    <li>適合居家訓練</li>
+                    <li>可搭配其他器材使用</li>
+                    <li>適合復健和肌力訓練</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- 重量訓練器材 -->
+    <section class="mb-12">
+        <h2 class="text-2xl font-semibold mb-6 text-gray-700">重量訓練器材</h2>
+
+        <!-- 槓鈴組 -->
+        <div class="bg-white rounded-lg shadow-md p-6 mb-6 flex flex-col md:flex-row items-center gap-6">
+            <img src="{{ url_for('static', filename='img/槓鈴組介紹.png') }}" alt="槓鈴組"
+                 style="width:220px; height:220px;" class="object-cover rounded">
+            <div>
+                <h3 class="text-xl font-semibold mb-4 text-gray-600">槓鈴組</h3>
+                <p class="text-gray-600 mb-2">進階重量訓練必備器材。</p>
+                <ul class="list-disc pl-6 space-y-2 text-gray-600">
+                    <li>奧林匹克槓片：規格標準</li>
+                    <li>槓鈴：男女尺寸規格不同</li>
+                    <li>適合複合式運動</li>
+                    <li>需要確保安全措施</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 健身架 -->
+        <div class="bg-white rounded-lg shadow-md p-6 flex flex-col md:flex-row items-center gap-6">
+            <img src="{{ url_for('static', filename='img/健身架介紹.png') }}" alt="健身架"
+                 style="width:220px; height:220px;" class="object-cover rounded">
+            <div>
+                <h3 class="text-xl font-semibold mb-4 text-gray-600">健身架</h3>
+                <p class="text-gray-600 mb-2">多功能訓練站。</p>
+                <ul class="list-disc pl-6 space-y-2 text-gray-600">
+                    <li>適合自由重量訓練</li>
+                    <li>內建安全保護裝置</li>
+                    <li>可進行多種訓練動作</li>
+                    <li>需要較大空間擺放</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+    
+
+    <!-- 器材保養建議 -->
+    <section class="mb-12">
+        <h2 class="text-2xl font-semibold mb-6 text-gray-700">器材保養建議</h2>
+        <div class="bg-white rounded-lg shadow-md p-6">
+            <ul class="list-disc pl-6 space-y-2 text-gray-600">
+                <li>定期檢查器材狀況</li>
+                <li>保持器材清潔</li>
+                <li>適當潤滑活動零件</li>
+                <li>正確收納和擺放</li>
+                <li>定期更換耗材配件</li>
+            </ul>
+        </div>
+    </section>
+</div>
+</body>
+</html>

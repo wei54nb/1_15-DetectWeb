@@ -5,7 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NKUST - 訓練影片上傳</title>
     <style>
-        /* 新增的按鈕格式 */
+        /* =============================
+           1. 全局重置與基本設定
+           ============================= */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: Arial, sans-serif;
+        }
+
+        body {
+            background-color: #f4f4f4;
+        }
+
+        /* =============================
+           2. 按鈕樣式
+           ============================= */
         .button {
             display: inline-block;
             padding: 0.75rem 1.5rem;
@@ -20,10 +36,10 @@
             z-index: 1;
             text-align: center;
             background-color: #00BCD4;
-            text-decoration: none; /* 去掉 a 的預設下劃線樣式 */
-            cursor: pointer; /* 統一鼠標樣式 */
-            border: none; /* 去掉 button 的預設邊框樣式 */
-            min-width: 150px; /* 設定最小寬度 */
+            text-decoration: none;
+            cursor: pointer;
+            border: none;
+            min-width: 150px;
         }
 
         .button:after {
@@ -59,61 +75,60 @@
             width: 100%;
         }
 
-
-        /* optional reset for presentation */
-        * {
-            font-family: Arial, sans-serif;
-            text-decoration: none;
-            font-size: 20px;
-        }
-
-
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-        }
-
+        /* =============================
+           3. 頂部區塊 (Header)
+           ============================= */
         .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
             background-color: #fff;
             padding: 10px 20px;
             border-bottom: 2px solid #00BCD4;
-            height: 150px;
+            min-height: 150px; /* 保持一定的高度 */
         }
 
         .logo-container {
             display: flex;
             align-items: center;
-            gap: 30px; /* 圖片與文字之間的距離 */
+            gap: 30px;
         }
 
         .logo-container img {
-            height: 50px; /* 圖片大小 */
+            height: 50px;
         }
 
         .logo-container span {
-            font-size: 2rem; /* 增加字體大小 */
-            font-weight: bold; /* 讓文字更醒目 */
-            color: #000; /* 文字顏色 */
+            font-size: 2rem;
+            font-weight: bold;
+            color: #000;
         }
 
+        /* =============================
+           4. 導覽按鈕 (Nav Buttons)
+           ============================= */
+        .nav-buttons {
+            display: flex;
+            gap: 90px;
+            align-items: center;
+        }
+
+        .nav-buttons a.button {
+            margin: 5px 0;
+        }
+
+        /* =============================
+           5. 選單 (Menu)
+           ============================= */
         .menu {
             position: relative;
+            margin-top: 10px;
         }
 
-        .menu-button {
-            background-color: #00BCD4;
-            color: #fff;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            width: 200px; /* 設置按鈕寬度 */
-            height: 60px; /* 設置按鈕高度 */
+        .menu > .button {
+            width: 200px;
+            height: 60px;
         }
 
         .menu-dropdown {
@@ -143,18 +158,26 @@
             background-color: #f4f4f4;
         }
 
-        .content {
-            display: flex;
-            flex-direction: column; /* 設置為上下排列 */
-            justify-content: center; /* 垂直方向居中 */
-            align-items: center; /* 水平方向居中 */
-            height: calc(100vh - 72px);
-            padding: 20px;
-            position: relative;
-            gap: 20px; /* 項目之間的間距 */
+        /* 滑鼠移到 menu 才顯示下拉 */
+        .menu:hover .menu-dropdown {
+            display: block;
         }
 
+        /* =============================
+           6. 主要內容區 (Content)
+           ============================= */
+        .content {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: calc(100vh - 150px);
+            padding: 20px;
+            position: relative;
+            gap: 20px;
+        }
 
+        /* 灰色資訊盒 */
         .gray-box {
             width: 80%;
             max-width: 600px;
@@ -165,7 +188,9 @@
             border-radius: 10px;
         }
 
-        /* 美化上傳表單 */
+        /* =============================
+           7. 上傳表單 (Upload Form)
+           ============================= */
         .upload-form {
             display: none;
             width: 80%;
@@ -173,7 +198,7 @@
             margin-top: 0;
             text-align: center;
             position: absolute;
-            top: 20px; /* 設置表單的位置讓它靠近上方 */
+            top: 20px;
         }
 
         .upload-form input[type="file"] {
@@ -182,12 +207,11 @@
             padding: 8px;
             font-size: 1rem;
             border-radius: 5px;
-            border: 1px solid #ccc; /* 給文件選擇框加邊框 */
+            border: 1px solid #ccc;
             background-color: #fff;
-            width: 80%; /* 設置文件選擇框的寬度 */
+            width: 80%;
         }
 
-        /* 美化上傳按鈕 */
         .upload-form button {
             padding: 12px 24px;
             background-color: #00BCD4;
@@ -198,72 +222,73 @@
             font-size: 1rem;
             font-weight: bold;
             transition: background-color 0.3s;
-            width: 100%; /* 使按鈕寬度占滿 */
-            margin-top: 20px; /* 在文件選擇框和按鈕之間增加間距 */
+            width: 100%;
+            margin-top: 20px;
         }
 
         .upload-form button:hover {
-            background-color: #0097a7; /* 滑鼠懸停時的顏色變化 */
+            background-color: #0097a7;
         }
 
-        /* 美化選擇框和按鈕的整體布局 */
-        .upload-form input[type="file"], .upload-form button {
-            box-sizing: border-box; /* 確保內外邊距不影響總寬度 */
+        .upload-form input[type="file"],
+        .upload-form button {
+            box-sizing: border-box;
         }
 
-
-        /* 顯示下拉選單 */
-        .menu:hover .menu-dropdown {
-            display: block;
-        }
-
-
-        .nav-buttons {
-            display: flex;
-            gap: 90px;
-
-        }
-
-
-        /* 卡片 */
+        /* =============================
+           8. 卡片區塊 (Cards)
+           ============================= */
         .cards {
             display: flex;
             justify-content: center;
-            align-items: flex-end; /* Align cards at the bottom */
+            align-items: flex-end;
             gap: 200px;
             margin: 40px 20px;
             background-color: transparent;
-            height: 70%; /* Ensure the container takes up full height */
+            flex-wrap: nowrap
+        }
 
+        /* 這是若你需要一個卡片外層容器，可使用 .card-container
+           也可以直接用 .cards 就好，看你實際的 HTML 結構 */
+        .card-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px; /* 卡片之間的間距 */
         }
 
         .card {
             display: flex;
+            /* flex 設定：最小寬度 300px，並可彈性縮放 */
+            flex: 1 1 300px;
+            max-width: 400px;
+
             flex-direction: column;
+            aspect-ratio: 3 / 4; /* 保持卡片長寬比例 */
             align-items: center;
-            justify-content: flex-end; /* Align content at the bottom of the card */
+            justify-content: flex-end;
             text-decoration: none;
             color: #000;
             background-color: transparent;
             transition: all 0.3s ease;
-            width: 220px;
-            height: 380px;
+            width: 220px; /* 原始寬度 */
+            height: 380px; /* 原始高度 */
             border-radius: 10px;
             overflow: hidden;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            margin: 10px;
         }
 
-
         .card a {
-            background-color: transparent; /* 確保 <a> 標籤也沒有背景顏色 */
+            background-color: transparent;
         }
 
         .card img {
-            width: 100%; /* 圖片寬度填滿卡片 */
-            height: 80%; /* 圖片高度相對卡片的比例 */
-            object-fit: cover; /* 確保圖片比例一致 */
-            filter: brightness(0.8); /* 默認暗一點 */
-            transition: filter 0.3s ease; /* 過渡效果 */
+            width: 100%;
+            height: 80%;
+            object-fit: cover;
+            filter: brightness(0.8);
+            transition: filter 0.3s ease;
         }
 
         .card span {
@@ -274,17 +299,89 @@
         }
 
         .card:hover img {
-            filter: brightness(1); /* 滑鼠懸停時恢復亮度 */
+            filter: brightness(1);
         }
 
+        /* =============================
+           9. 煙火特效 (Fireworks Canvas)
+           ============================= */
         .fireworks {
-            left: 0;
-            pointer-events: none;
             position: fixed;
             top: 0;
+            left: 0;
+            pointer-events: none;
             z-index: 9999;
         }
 
+        /* =============================
+           10. 媒體查詢 (RWD)
+           ============================= */
+
+        /* 平板與較小裝置 (<= 1024px) */
+        @media (max-width: 1024px) {
+            .nav-buttons {
+                gap: 20px;
+            }
+
+            .cards {
+                gap: 20px;
+                margin: 20px;
+            }
+        }
+
+        /* 手機裝置 (<= 768px) */
+        @media (max-width: 768px) {
+            /* Header 頂部調整 */
+            .header {
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+            }
+
+            .logo-container {
+                gap: 15px;
+                margin-bottom: 10px;
+            }
+
+            .logo-container img {
+                height: 40px;
+            }
+
+            .logo-container span {
+                font-size: 1.5rem;
+            }
+
+            /* Nav 按鈕改為直式排列 */
+            .nav-buttons {
+                gap: 10px;
+                width: 100%;
+                align-items: center;
+            }
+
+            .menu {
+                margin-top: 10px;
+            }
+
+            .content {
+                min-height: auto;
+            }
+
+            .gray-box,
+            .upload-form {
+                width: 90%;
+            }
+
+            /* 卡片在手機上縮放 */
+            .card {
+                width: 90%;
+                max-width: 300px;
+                height: auto; /* 讓高度自動縮放 */
+            }
+
+            .card img {
+                height: auto;
+            }
+        }
 
     </style>
 </head>
@@ -304,8 +401,14 @@
             <a href="{{ url_for('realtime') }}" class="button">
                 即時偵測
             </a>
-            <button class="button">動作知識</button>
-            <button class="button">器材介紹</button>
+
+            <a href="{{ url_for('Equipment_Introduction') }}" class="button">
+                器材介紹
+            </a>
+
+            <a href="{{ url_for('Exercise_Knowledge') }}" class="button">
+                動作知識
+            </a>
 
         </div>
         <div class="menu">
@@ -315,6 +418,7 @@
                 <button onclick="showUploadForm('bicep-curl')">二頭訓練</button>
                 <button onclick="showUploadForm('shoulder-press')">肩推訓練</button>
                 <button onclick="showUploadForm('push-up')">伏地挺身</button>
+                <button onclick="showUploadForm('pull-up')">引體向上</button>
             </div>
         </div>
     </div>

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>運動動作知識庫</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-50">
+  <div class="container mx-auto px-4 py-8 max-w-4xl">
+    <h1 class="text-3xl font-bold mb-8 text-gray-800">運動動作知識庫</h1>
+
+    <!-- 運動動作介紹區 -->
+    <section class="mb-12">
+      <h2 class="text-2xl font-semibold mb-6 text-gray-700">運動動作介紹</h2>
+
+      <!-- 深蹲 -->
+      <div class="bg-white rounded-lg shadow-md p-6 mb-6 flex flex-col md:flex-row items-center gap-6">
+        <img src="{{ url_for('static', filename='img/深蹲介紹.png') }}" alt="深蹲" style="width:220px; height:220px;" class="object-cover rounded">
+        <div>
+          <h3 class="text-xl font-semibold mb-4 text-gray-600">深蹲 (Squat)</h3>
+          <p class="text-gray-600 mb-2">
+            <span class="font-semibold">如何做：</span>站立，雙腳與肩同寬、腳尖稍向外。慢慢下蹲至大腿與地面平行，再利用大腿與臀部的力量站起來。
+          </p>
+          <p class="text-gray-600">
+            <span class="font-semibold">注意重點：</span>膝蓋不要超過腳尖；保持背部挺直與核心收緊；動作需穩定且控制好下降與上升的速度。
+          </p>
+        </div>
+      </div>
+
+      <!-- 二頭彎舉 -->
+      <div class="bg-white rounded-lg shadow-md p-6 mb-6 flex flex-col md:flex-row items-center gap-6">
+        <img src="{{ url_for('static', filename='img/二頭灣舉.png') }}" alt="二頭彎舉" style="width:220px; height:220px;" class="object-cover rounded">
+        <div>
+          <h3 class="text-xl font-semibold mb-4 text-gray-600">二頭彎舉 (Biceps Curl)</h3>
+          <p class="text-gray-600 mb-2">
+            <span class="font-semibold">如何做：</span>雙手各持一啞鈴，自然垂放。保持肘部貼近身體，彎曲手臂將啞鈴舉向肩部，然後慢慢下降回原位。
+          </p>
+          <p class="text-gray-600">
+            <span class="font-semibold">注意重點：</span>背部保持穩定，避免用身體擺動；專注於二頭肌的收縮；動作要平穩且控制得宜。
+          </p>
+        </div>
+      </div>
+
+      <!-- 肩推 -->
+      <div class="bg-white rounded-lg shadow-md p-6 mb-6 flex flex-col md:flex-row items-center gap-6">
+        <img src="{{ url_for('static', filename='img/肩推.png') }}" alt="肩推" style="width:220px; height:220px;" class="object-cover rounded">
+        <div>
+          <h3 class="text-xl font-semibold mb-4 text-gray-600">肩推 (Shoulder Press)</h3>
+          <p class="text-gray-600 mb-2">
+            <span class="font-semibold">如何做：</span>坐或站姿均可，雙手各持啞鈴放於肩部位置，用力推舉啞鈴至手臂伸直，然後緩慢下降回到起始位置。
+          </p>
+          <p class="text-gray-600">
+            <span class="font-semibold">注意重點：</span>保持核心穩定；避免肩部過度伸展；動作過程中節奏要均勻且控制良好。
+          </p>
+        </div>
+      </div>
+
+      <!-- 伏地挺身 -->
+      <div class="bg-white rounded-lg shadow-md p-6 mb-6 flex flex-col md:flex-row items-center gap-6">
+        <img src="{{ url_for('static', filename='img/扶地挺身.png') }}" alt="伏地挺身" style="width:220px; height:220px;" class="object-cover rounded">
+        <div>
+          <h3 class="text-xl font-semibold mb-4 text-gray-600">伏地挺身 (Push-up)</h3>
+          <p class="text-gray-600 mb-2">
+            <span class="font-semibold">如何做：</span>雙手置於肩寬位置撐地，身體保持一條直線。彎曲手肘讓胸部接近地面，再推起回到起始位置。
+          </p>
+          <p class="text-gray-600">
+            <span class="font-semibold">注意重點：</span>保持全身平直，避免臀部抬高或下垂；動作要穩定且有控制；正確的呼吸同樣重要。
+          </p>
+        </div>
+      </div>
+
+      <!-- 引體向上 -->
+      <div class="bg-white rounded-lg shadow-md p-6 mb-6 flex flex-col md:flex-row items-center gap-6">
+        <img src="{{ url_for('static', filename='img/引體向上.png') }}" alt="引體向上" style="width:220px; height:220px;" class="object-cover rounded">
+        <div>
+          <h3 class="text-xl font-semibold mb-4 text-gray-600">引體向上 (Pull-up)</h3>
+          <p class="text-gray-600 mb-2">
+            <span class="font-semibold">如何做：</span>懸掛在橫桿上，雙手與肩同寬握住橫桿，利用背部及手臂力量拉起身體，直到下巴超過橫桿，再慢慢下降。
+          </p>
+          <p class="text-gray-600">
+            <span class="font-semibold">注意重點：</span>主要運用背部肌群發力，避免完全依賴手臂；動作需平穩且不要借助身體搖擺。
+          </p>
+        </div>
+      </div>
+
+      <!-- 啞鈴划船 -->
+      <div class="bg-white rounded-lg shadow-md p-6 flex flex-col md:flex-row items-center gap-6">
+        <img src="{{ url_for('static', filename='img/啞鈴划船.png') }}" alt="啞鈴划船" style="width:220px; height:220px;" class="object-cover rounded">
+        <div>
+          <h3 class="text-xl font-semibold mb-4 text-gray-600">啞鈴划船 (Dumbbell Row)</h3>
+          <p class="text-gray-600 mb-2">
+            <span class="font-semibold">如何做：</span>一手支撐於長凳上，另一手持啞鈴，從下方拉啞鈴至腰部，然後慢慢放下回原位。
+          </p>
+          <p class="text-gray-600">
+            <span class="font-semibold">注意重點：</span>保持背部挺直，核心收緊；動作過程中避免身體左右擺動；確保每次拉動都專注於目標肌群。
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 注意事項 -->
+    <section class="mb-12">
+      <h2 class="text-2xl font-semibold mb-6 text-gray-700">注意事項</h2>
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <ul class="list-disc pl-6 space-y-2 text-gray-600">
+          <li>運動前需充分熱身</li>
+          <li>保持正確呼吸與動作節奏</li>
+          <li>專注於目標肌群的收縮</li>
+          <li>如有不適，請立即停止運動</li>
+          <li>逐步增加重量，避免一次使用過高負荷</li>
+        </ul>
+      </div>
+    </section>
+  </div>
+</body>
+</html>
