@@ -383,6 +383,19 @@
             }
         }
 
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-left: auto; /* 將 user-info 推到右側 */
+        }
+
+        .user-info span {
+            font-size: 1rem;
+            color: #000;
+            font-weight: bold;
+        }
+
     </style>
 </head>
 <body>
@@ -410,7 +423,20 @@
                 動作知識
             </a>
 
+            <a href="{{ url_for('classroom') }}" class="button">
+                課程課堂回應
+            </a>
+            <div class="user-info">
+                {% if current_user.is_authenticated %}
+                <span>歡迎, {{ current_user.username }} ({{ current_user.role }})</span>
+                <a href="{{ url_for('logout') }}" class="button">登出</a>
+                {% else %}
+                <a href="{{ url_for('login') }}" class="button">登入</a>
+                {% endif %}
+            </div>
+
         </div>
+        <!-- 顯示當前登入者資訊
         <div class="menu">
             <button class="button">選擇訓練類型</button>
             <div class="menu-dropdown">
@@ -420,7 +446,7 @@
                 <button onclick="showUploadForm('push-up')">伏地挺身</button>
                 <button onclick="showUploadForm('pull-up')">引體向上</button>
             </div>
-        </div>
+        </div>-->
     </div>
 
     <div class="content">
@@ -480,6 +506,21 @@
             canvasEl.style.height = window.innerHeight + 'px';
             canvasEl.getContext('2d').scale(2, 2);
         }
+
+        fetch('/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                username: username,
+                password: password
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            // 處理回應
+        });
 
         function updateCoords(e) {
             pointerX = e.clientX || e.touches[0].clientX;

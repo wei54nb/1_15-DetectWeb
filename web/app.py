@@ -3,9 +3,6 @@ eventlet.monkey_patch()  # 這行確保 socketIO 可以正確使用 eventlet
 
 # 使用 PyMySQL 代替 MySQLdb（純 Python，不需要編譯 C 擴展）
 import pymysql
-# 不再使用 flask_mysqldb 了，因此可移除以下 import：
-# from flask_mysqldb import MySQL
-
 # 在程式開頭更新日誌配置
 import logging
 import sys
@@ -20,7 +17,13 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# 其他 import
+
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from flask_bcrypt import Bcrypt
+from flask import Flask, request, jsonify, render_template
+from werkzeug.security import generate_password_hash
+import mysql.connector
+from mysql.connector import Error
 from io import BytesIO
 import pandas as pd
 from flask import send_file
@@ -39,32 +42,124 @@ import time
 import mediapipe as mp
 from datetime import datetime
 import yaml
+from flask_login import UserMixin
 
 # ------------------------------
 # 資料庫設定與連線 (使用 PyMySQL)
 # ------------------------------
 db_config = {
-    'MYSQL_HOST': 'localhost',
-    'MYSQL_USER': 'nkust_user',
-    'MYSQL_PASSWORD': '1234',
-    'MYSQL_DB': 'nkust_exercise'
+    'host': 'localhost',
+    'user': 'nkust_user',
+    'password': '1234',
+    'database': 'nkust_exercise'
 }
+
 
 # 建立 Flask 應用前先設定資料庫配置到 app.config 中
 app = Flask(__name__, static_folder='static')
-app.config.update(db_config)
+
+
+app.secret_key = "your_secret_key"  # 設定 Flask 的 session key
+bcrypt = Bcrypt(app)
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+
+
+class User(UserMixin):
+    def __init__(self, user_id, username, role):
+        self.id = str(user_id)  # 🔹 確保 user_id 是字串，避免 session 讀取問題
+        self.username = username
+        self.role = role
+
 
 # 自訂一個函式用來取得資料庫連線
 def get_db_connection():
-    connection = pymysql.connect(
-        host=app.config['MYSQL_HOST'],
-        user=app.config['MYSQL_USER'],
-        password=app.config['MYSQL_PASSWORD'],
-        database=app.config['MYSQL_DB'],
-        charset='utf8mb4',
-        cursorclass=pymysql.cursors.DictCursor
-    )
-    return connection
+    try:
+        conn = mysql.connector.connect(**db_config)
+        return conn
+    except mysql.connector.Error as err:
+        if err.errno == mysql.connector.errorcode.ER_ACCESS_DENIED_ERROR:
+            app.logger.error("資料庫使用者名稱或密碼錯誤")
+        elif err.errno == mysql.connector.errorcode.ER_BAD_DB_ERROR:
+            app.logger.error("資料庫不存在")
+        else:
+            app.logger.error(f"資料庫連接錯誤: {err}")
+        return None
+
+
+def user_exists(username):
+    """檢查用戶名是否已存在"""
+    conn = get_db_connection()
+    if not conn:
+        raise Exception("無法連接資料庫")
+
+    try:
+        cursor = conn.cursor()
+        query = "SELECT COUNT(*) FROM users WHERE username = %s"
+        cursor.execute(query, (username,))
+        count = cursor.fetchone()[0]
+        return count > 0
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def create_user(username, password_hash, role):
+    """創建新用戶"""
+    conn = get_db_connection()
+    if not conn:
+        raise Exception("無法連接資料庫")
+
+    try:
+        cursor = conn.cursor()
+        query = """
+        INSERT INTO users (username, password_hash, role)
+        VALUES (%s, %s, %s)
+        """
+        cursor.execute(query, (username, password_hash, role))
+        conn.commit()
+    except Error as e:
+        conn.rollback()
+        raise Exception(f"創建用戶錯誤: {e}")
+    finally:
+        cursor.close()
+        conn.close()
+
+def test_db_connection():
+    try:
+        conn = get_db_connection()
+        if conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1")
+            result = cursor.fetchone()
+            cursor.close()
+            conn.close()
+            return result[0] == 1
+        return False
+    except Exception as e:
+        print(f"測試連接錯誤: {e}")
+        return False
+
+def check_users_table():
+    try:
+        conn = get_db_connection()
+        if conn:
+            cursor = conn.cursor()
+            cursor.execute("DESCRIBE users")
+            columns = cursor.fetchall()
+            cursor.close()
+            conn.close()
+            return len(columns) > 0
+        return False
+    except Exception as e:
+        print(f"檢查表結構錯誤: {e}")
+        return False
+
+# 在啟動應用前測試
+if not test_db_connection():
+    print("警告: 無法連接到資料庫!")
+
 
 socketio = SocketIO(app, async_mode='eventlet', cors_allowed_origins="*")
 
@@ -602,11 +697,31 @@ def setup_gpu():
     except Exception as e:
         print(f"GPU 配置時發生錯誤：{e}")
         print("將使用 CPU 運行")
-# 路由
-# 路由部分
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    print(f"🔍 嘗試加載用戶 ID: {user_id}")  # Debug
+
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM users WHERE user_id = %s", (user_id,))
+    user = cursor.fetchone()
+    cursor.close()
+    connection.close()
+
+    print(f"📝 查詢結果: {user}")  # Debug
+
+    if user:
+        return User(user["user_id"], user["username"], user["role"])
+    else:
+        print("⚠️ 找不到用戶，回傳 None")
+        return None  # 確保找不到用戶時回傳 None
+
+
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('index.html', current_user=current_user)
 
 @app.route('/realtime')
 def realtime():
@@ -851,6 +966,260 @@ def test_db():
     except Exception as e:
         return jsonify({'error': f'數據庫連接失敗: {str(e)}'})
 
+
+@app.route('/classroom')
+@login_required  # 確保用戶已登入
+def classroom():
+    return render_template('classroom.html')
+
+
+@app.route('/api/discussions', methods=['GET'])
+def get_discussions():
+    try:
+        course_id = request.args.get('course_id')
+        connection = get_db_connection()
+        cursor = connection.cursor(dictionary=True)  # 使用 dictionary cursor 讓結果更容易處理
+
+        cursor.execute("""
+            SELECT d.*, c.course_name,
+                   COALESCE(u_student.username, '') as student_username,
+                   COALESCE(u_teacher.username, '') as teacher_username,
+                   (SELECT COUNT(*) FROM responses WHERE discussion_id = d.discussion_id) as response_count
+            FROM discussions d
+            JOIN courses c ON d.course_id = c.course_id
+            LEFT JOIN users u_student ON d.student_id = u_student.user_id
+            LEFT JOIN users u_teacher ON d.teacher_id = u_teacher.user_id
+            WHERE d.course_id = %s
+            ORDER BY d.created_at DESC
+        """, (course_id,))
+
+        discussions = cursor.fetchall()
+        cursor.close()
+        connection.close()
+
+        # 確保所有數據欄位格式正確
+        for d in discussions:
+            d['created_at'] = d['created_at'].isoformat() if d['created_at'] else None
+            # 判斷發布者是教師還是學生
+            if d['teacher_id']:
+                d['publisher_id'] = d['teacher_id']
+                d['publisher_name'] = d['teacher_username']
+                d['is_teacher_post'] = True
+            else:
+                d['publisher_id'] = d['student_id']
+                d['publisher_name'] = d['student_username']
+                d['is_teacher_post'] = False
+
+        return jsonify({'success': True, 'discussions': discussions})
+    except Exception as e:
+        logger.error(f"獲取討論列表失敗: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@app.route('/api/discussions', methods=['POST'])
+@login_required  # 需要登入才能發討論
+def create_discussion():
+    try:
+        data = request.json
+        course_id = data.get('course_id')
+        title = data.get('title')
+        content = data.get('content')
+
+        if not all([course_id, title, content]):
+            return jsonify({'success': False, 'error': '缺少必要資料'}), 400
+
+        connection = get_db_connection()
+        cursor = connection.cursor()
+
+        if current_user.role == 'teacher':
+            cursor.execute("""
+                INSERT INTO discussions (course_id, teacher_id, title, content)
+                VALUES (%s, %s, %s, %s)
+            """, (course_id, current_user.id, title, content))
+        else:
+            cursor.execute("""
+                INSERT INTO discussions (course_id, student_id, title, content)
+                VALUES (%s, %s, %s, %s)
+            """, (course_id, current_user.id, title, content))
+
+        connection.commit()
+        cursor.close()
+        connection.close()
+
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"創建討論失敗: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@app.route('/api/discussions/<int:discussion_id>', methods=['DELETE'])
+def delete_discussion(discussion_id):
+    try:
+        user_id = request.json.get('user_id')
+        is_teacher = request.json.get('is_teacher', False)
+
+        if not is_teacher:
+            return jsonify({'success': False, 'error': '只有老師可以刪除討論'}), 403
+
+        connection = get_db_connection()
+        cursor = connection.cursor()
+        cursor.execute("DELETE FROM discussions WHERE discussion_id = %s", (discussion_id,))
+        connection.commit()
+        cursor.close()
+        connection.close()
+
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"刪除討論失敗: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/responses/<int:response_id>', methods=['DELETE'])
+def delete_response(response_id):
+    try:
+        user_id = request.json.get('user_id')
+        is_teacher = request.json.get('is_teacher', False)
+
+        if not is_teacher:
+            return jsonify({'success': False, 'error': '只有老師可以刪除回覆'}), 403
+
+        connection = get_db_connection()
+        cursor = connection.cursor()
+        cursor.execute("DELETE FROM responses WHERE response_id = %s", (response_id,))
+        connection.commit()
+        cursor.close()
+        connection.close()
+
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"刪除回覆失敗: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@app.route('/api/responses', methods=['GET'])
+def get_responses():
+    try:
+        discussion_id = request.args.get('discussion_id')
+        connection = get_db_connection()
+        cursor = connection.cursor(dictionary=True)  # 使用 dictionary cursor
+
+        cursor.execute("""
+            SELECT r.*,
+                   CASE 
+                     WHEN r.is_teacher = 1 THEN (SELECT username FROM users WHERE user_id = r.user_id)
+                     ELSE (SELECT username FROM users WHERE user_id = r.user_id)
+                   END as username
+            FROM responses r
+            WHERE r.discussion_id = %s
+            ORDER BY r.created_at ASC
+        """, (discussion_id,))
+
+        responses = cursor.fetchall()
+        cursor.close()
+        connection.close()
+
+        # 確保創建時間的格式正確
+        for r in responses:
+            r['created_at'] = r['created_at'].isoformat() if r['created_at'] else None
+
+        return jsonify({'success': True, 'responses': responses})
+    except Exception as e:
+        logger.error(f"獲取回覆失敗: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@app.route('/api/responses', methods=['POST'])
+def create_response():
+    try:
+        data = request.json
+        discussion_id = data.get('discussion_id')
+        user_id = data.get('user_id')
+        content = data.get('content')
+        is_teacher = data.get('is_teacher', False)
+
+        if not all([discussion_id, user_id, content]):
+            return jsonify({'success': False, 'error': '缺少必要資料'}), 400
+
+        connection = get_db_connection()
+        cursor = connection.cursor()
+
+        cursor.execute("""
+            INSERT INTO responses (discussion_id, user_id, content, is_teacher)
+            VALUES (%s, %s, %s, %s)
+        """, (discussion_id, user_id, content, is_teacher))
+
+        connection.commit()
+        cursor.close()
+        connection.close()
+
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"創建回覆失敗: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/register', methods=['GET'])
+def register_page():
+    return render_template('register.html')
+
+from flask_bcrypt import Bcrypt
+
+bcrypt = Bcrypt(app)
+
+@app.route('/register', methods=['POST'])
+def handle_register():
+    try:
+        data = request.get_json()
+        username = data['username']
+        password = data['password']
+        role = data['role']
+
+        if user_exists(username):
+            return jsonify({'success': False, 'error': '用戶名已存在'}), 409
+
+        # 確保使用 Flask-Bcrypt 來加密密碼
+        hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
+
+        create_user(username, hashed_password, role)
+        return jsonify({'success': True, 'message': '註冊成功'}), 201
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.json
+    username = data.get('username')
+    password = data.get('password')
+
+    connection = get_db_connection()
+    cursor = connection.cursor(dictionary=True)
+    cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
+    user = cursor.fetchone()
+    cursor.close()
+    connection.close()
+
+    if user and bcrypt.check_password_hash(user["password_hash"], password):
+        user_obj = User(user["user_id"], user["username"], user["role"])
+        login_user(user_obj)
+
+        # 🔹 如果 `next` 參數存在，跳轉回原本的頁面，否則跳轉到首頁
+        next_page = request.args.get('next')
+        return jsonify({'success': True, 'message': '登入成功', 'role': user["role"], 'next': next_page or '/'})
+    else:
+        return jsonify({'success': False, 'error': '帳號或密碼錯誤'})
+
+@app.route('/login', methods=['GET'])
+def login_page():
+    return render_template('login.html')
+
+@app.route('/logout', methods=['GET'])
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('index'))  # 確保'index'是你的首頁路由名稱
+
+
+
+
 if __name__ == '__main__':
     setup_gpu()
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -861,4 +1230,5 @@ if __name__ == '__main__':
     while not processed_frame_buffer.empty():
         processed_frame_buffer.get()
     threading.Thread(target=check_thread_status, daemon=True, name="ThreadMonitor").start()
+    app.logger.info("🚀 Flask 伺服器啟動: http://127.0.0.1:5000")
     socketio.run(app, host='127.0.0.1', port=5000, debug=False)
