@@ -1017,7 +1017,7 @@ def get_discussions():
 
 
 @app.route('/api/discussions', methods=['POST'])
-@login_required  # 需要登入才能發討論
+@login_required
 def create_discussion():
     try:
         data = request.json
@@ -1032,14 +1032,17 @@ def create_discussion():
         cursor = connection.cursor()
 
         if current_user.role == 'teacher':
+
             cursor.execute("""
-                INSERT INTO discussions (course_id, teacher_id, title, content)
-                VALUES (%s, %s, %s, %s)
-            """, (course_id, current_user.id, title, content))
+                INSERT INTO discussions (course_id, teacher_id, student_id, title, content)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (course_id, current_user.id, None, title, content))
+
         else:
+            # 學生發文時，teacher_id 設為 NULL
             cursor.execute("""
-                INSERT INTO discussions (course_id, student_id, title, content)
-                VALUES (%s, %s, %s, %s)
+                INSERT INTO discussions (course_id, teacher_id, student_id, title, content)
+                VALUES (%s, NULL, %s, %s, %s)
             """, (course_id, current_user.id, title, content))
 
         connection.commit()
@@ -1128,13 +1131,16 @@ def get_responses():
 
 
 @app.route('/api/responses', methods=['POST'])
+@login_required
 def create_response():
     try:
         data = request.json
         discussion_id = data.get('discussion_id')
-        user_id = data.get('user_id')
         content = data.get('content')
-        is_teacher = data.get('is_teacher', False)
+        user_id = current_user.id
+
+        # 根據當前使用者的角色自動設定 is_teacher
+        is_teacher = True if current_user.role == 'teacher' else False
 
         if not all([discussion_id, user_id, content]):
             return jsonify({'success': False, 'error': '缺少必要資料'}), 400
