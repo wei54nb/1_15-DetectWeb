@@ -21,57 +21,78 @@
 ### 硬體需求
 - 建議配備 NVIDIA GPU 以獲得更佳的運算效能，否則可使用 CPU 模式運行。
 
-## 環境設置
+## MySQL 資料庫設定
 
-### 1. 建立虛擬環境 (推薦)
-```sh
-python -m venv venv
-source venv/bin/activate  # Mac/Linux
-venv\Scripts\activate  # Windows
+請先建立資料庫 `nkust_exercise`，接著依照以下 SQL 指令建立必要的資料表：
+
+### 建立 `courses` 表
+```sql
+CREATE TABLE courses (
+  course_id INT AUTO_INCREMENT PRIMARY KEY,
+  course_name VARCHAR(100) NOT NULL,
+  teacher_id VARCHAR(50) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 ```
 
-### 2. 安裝依賴套件
-```sh
-pip install -r requirements.txt
+### 建立 `discussions` 表
+```sql
+CREATE TABLE discussions (
+  discussion_id INT AUTO_INCREMENT PRIMARY KEY,
+  course_id INT NOT NULL,
+  student_id INT,
+  title VARCHAR(200) NOT NULL,
+  content TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  teacher_id INT
+);
 ```
 
-### 3. Requirements File (requirements.txt)
-```txt
-Flask==2.2.5
-Flask-SocketIO==5.5.1
-Flask-Login==0.6.3
-Flask-Bcrypt==1.0.1
-mysql-connector-python==9.0.0
-PyMySQL==1.1.1
-pandas==1.5.3
-opencv-python==4.10.0
-numpy==1.23.5
-ultralytics==8.0.55
-torch==2.1.1+cu118
-mediapipe==0.10.11
-eventlet==0.38.2
-Werkzeug==2.2.3
-XlsxWriter==3.2.2
+### 建立 `exercise_info` 表
+```sql
+CREATE TABLE exercise_info (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  student_id VARCHAR(50) NOT NULL,
+  weight DECIMAL(5,2) NOT NULL,
+  reps INT NOT NULL,
+  sets INT NOT NULL,
+  exercise_type VARCHAR(50) NOT NULL,
+  timestamp DATETIME NOT NULL
+);
 ```
 
-## GPU 與 CUDA / cuDNN 支援
-
-本專案在 PyTorch **2.1.1+cu118** 環境下測試，該版本內建 CUDA 11.8 支援。
-
-- **CUDA 版本**：11.8
-- **cuDNN 版本**：建議使用 cuDNN v8.6 或更新版本。
-- **NVIDIA 驅動**：565.90（支援 CUDA 12.7，但向下相容 CUDA 11.8）。
-
-## 專案結構
+### 建立 `exercise_records` 表
+```sql
+CREATE TABLE exercise_records (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  monster_count INT NOT NULL DEFAULT 0,
+  exercise_type VARCHAR(50) NOT NULL,
+  timestamp DATETIME NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 ```
-.
-├── app.py                 # 主後端程式
-├── requirements.txt       # 依賴套件清單
-├── static/                # 靜態檔案 (如模型權重)
-├── templates/             # HTML 模板
-├── uploads/               # 上傳的影片存放目錄
-├── output/                # 處理後影片存放目錄
-└── README.md              # 專案說明文件
+
+### 建立 `responses` 表
+```sql
+CREATE TABLE responses (
+  response_id INT AUTO_INCREMENT PRIMARY KEY,
+  discussion_id INT NOT NULL,
+  user_id VARCHAR(50) NOT NULL,
+  content TEXT NOT NULL,
+  is_teacher TINYINT(1) DEFAULT 0,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### 建立 `users` 表
+```sql
+CREATE TABLE users (
+  user_id INT AUTO_INCREMENT PRIMARY KEY,
+  username VARCHAR(50) NOT NULL UNIQUE,
+  password_hash VARCHAR(255) NOT NULL,
+  role ENUM('student', 'teacher') NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 ```
 
 ## 伺服器啟動
@@ -83,26 +104,6 @@ XlsxWriter==3.2.2
 ```sh
 python app.py
 ```
-
-## API 端點說明
-
-### 1. 上傳影片與姿態分析
-- **Endpoint**: `POST /upload`
-- **參數**: `file`（影片檔案）、`exercise`（運動類型）
-- **回應**: 返回處理後的影片與檢測資訊
-
-### 2. 啟動即時偵測
-- **Endpoint**: `POST /start_detection`
-- **參數**: `exercise_type`（運動類型）
-- **回應**: 返回是否成功啟動即時偵測
-
-### 3. 停止即時偵測
-- **Endpoint**: `POST /stop_detection`
-- **回應**: 返回是否成功停止即時偵測
-
-### 4. 匯出運動記錄 (Excel)
-- **Endpoint**: `GET /export_excel`
-- **回應**: 返回包含運動數據的 Excel 檔案
 
 ## 其他設定
 
