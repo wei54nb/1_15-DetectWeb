@@ -21,6 +21,75 @@
 ### 硬體需求
 - 建議配備 NVIDIA GPU 以獲得更佳的運算效能，否則可使用 CPU 模式運行。
 
+
+
+
+# Fitness Exercise Detection Backend
+
+這是一個基於 Flask、YOLOv8 和 MediaPipe 的後端服務，主要用於運動姿態檢測與計數，支持即時檢測與影片分析。該專案使用 MySQL 資料庫儲存使用者資訊與運動記錄，並提供 API 以支援前端應用。
+
+## 主要功能
+- **運動姿態檢測**：使用 YOLOv8 與 MediaPipe 進行姿態估計
+- **支援多種運動**：包含深蹲 (squat)、二頭肌彎舉 (bicep curl)、肩上推舉 (shoulder press)、引體向上 (pull-up)、伏地挺身 (push-up) 等
+- **即時視訊處理**：提供實時影像串流與姿態檢測
+- **自動計數**：根據姿態角度變化自動計算運動次數
+- **影片上傳與處理**：支援影片上傳，並輸出標註後的影片
+- **MySQL 整合**：使用 MySQL 存儲使用者與運動記錄
+- **API 端點**：提供前端使用的 RESTful API
+
+## 環境與套件需求
+
+### 軟體需求
+- **Python 3.8** 或以上（本專案測試使用 Python 3.8.20）
+- **MySQL Server**：請先啟動 MySQL 服務，並建立資料庫 `nkust_exercise`
+- **NVIDIA GPU (選用)**：使用 NVIDIA GPU 可加速模型推論
+
+### 硬體需求
+- 建議配備 NVIDIA GPU 以獲得更佳的運算效能，否則可使用 CPU 模式運行。
+
+
+## GPU 與 CUDA / cuDNN 支援
+
+本專案在 PyTorch **2.1.1+cu118** 環境下測試，該版本內建 CUDA 11.8 支援。
+儘管從 `nvidia-smi` 你可以看到系統支援 CUDA 12.7，但 PyTorch 是以 CUDA 11.8 編譯，故請確認下列項目：
+
+- **PyTorch 版本**：2.1.1+cu118  
+  執行以下程式確認版本：
+  ```python
+  import torch
+  print(torch.__version__)  # 應輸出 2.1.1+cu118
+  ```
+
+- **CUDA 版本**：11.8  
+  建議安裝與 CUDA 11.8 相容的 CUDA 工具包和 cuDNN。
+  你可以用下列指令確認：
+  ```python
+  import torch
+  print(torch.cuda.is_available())
+  print(torch.version.cuda)  # 預期輸出：11.8
+  ```
+
+- **cuDNN 版本**：請使用與 CUDA 11.8 相容的 cuDNN（例如 cuDNN v8.6 或更新版本）。
+
+- **NVIDIA 驅動**：根據 `nvidia-smi`，你的驅動版本為 **565.90**，支援 CUDA 12.7，但同時向下相容於 CUDA 11.8。
+
+在 `app.py` 中，GPU 的配置如下：
+```python
+import os
+import torch
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+if torch.cuda.is_available():
+    device = 'cuda'
+    print(f"Using GPU: {torch.cuda.get_device_name(0)}")
+else:
+    device = 'cpu'
+    print("Using CPU")
+```
+
+
+
+
 ## MySQL 資料庫設定
 
 請先建立資料庫 `nkust_exercise`，接著依照以下 SQL 指令建立必要的資料表：
