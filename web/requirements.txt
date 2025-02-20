@@ -1,0 +1,15 @@
+Flask==2.2.5
+Flask-SocketIO==5.5.1
+Flask-Login==0.6.3
+Flask-Bcrypt==1.0.1
+mysql-connector-python==9.0.0
+PyMySQL==1.1.1
+pandas==1.5.3
+opencv-python==4.10.0
+numpy==1.23.5
+ultralytics==8.0.55
+torch==2.1.1+cu118
+mediapipe==0.10.11
+eventlet==0.38.2
+Werkzeug==2.2.3
+XlsxWriter==3.2.2

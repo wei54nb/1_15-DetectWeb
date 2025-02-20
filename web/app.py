@@ -20,7 +20,6 @@ logger = logging.getLogger(__name__)
 
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from flask_bcrypt import Bcrypt
-from flask import Flask, request, jsonify, render_template
 from werkzeug.security import generate_password_hash
 import mysql.connector
 from mysql.connector import Error
@@ -29,7 +28,6 @@ import pandas as pd
 from flask import send_file
 from flask import Flask, request, render_template, redirect, url_for, send_from_directory, Response, jsonify
 from flask_socketio import SocketIO
-import eventlet.wsgi
 import os
 import cv2
 import numpy as np
@@ -41,7 +39,6 @@ import threading
 import time
 import mediapipe as mp
 from datetime import datetime
-import yaml
 from flask_login import UserMixin
 
 # ------------------------------
@@ -231,11 +228,9 @@ with app.app_context():
         except Exception as e:
             logger.error(f"Error loading YOLO model for {exercise_type}: {e}")
 
-
 # 工具函數
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
 
 def calculate_angle(a, b, c):
     # 將 a, b, c 轉換為 numpy 陣列
@@ -263,7 +258,6 @@ def calculate_angle(a, b, c):
     angle = np.degrees(np.arccos(cos_theta))
 
     return angle
-
 
 def get_pose_angles(keypoints):
     angles = {}
@@ -718,7 +712,6 @@ def load_user(user_id):
         print("⚠️ 找不到用戶，回傳 None")
         return None  # 確保找不到用戶時回傳 None
 
-
 @app.route('/')
 def index():
     return render_template('index.html', current_user=current_user)
@@ -1055,49 +1048,6 @@ def create_discussion():
         return jsonify({'success': False, 'error': str(e)})
 
 
-@app.route('/api/discussions/<int:discussion_id>', methods=['DELETE'])
-def delete_discussion(discussion_id):
-    try:
-        user_id = request.json.get('user_id')
-        is_teacher = request.json.get('is_teacher', False)
-
-        if not is_teacher:
-            return jsonify({'success': False, 'error': '只有老師可以刪除討論'}), 403
-
-        connection = get_db_connection()
-        cursor = connection.cursor()
-        cursor.execute("DELETE FROM discussions WHERE discussion_id = %s", (discussion_id,))
-        connection.commit()
-        cursor.close()
-        connection.close()
-
-        return jsonify({'success': True})
-    except Exception as e:
-        logger.error(f"刪除討論失敗: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)})
-
-@app.route('/api/responses/<int:response_id>', methods=['DELETE'])
-def delete_response(response_id):
-    try:
-        user_id = request.json.get('user_id')
-        is_teacher = request.json.get('is_teacher', False)
-
-        if not is_teacher:
-            return jsonify({'success': False, 'error': '只有老師可以刪除回覆'}), 403
-
-        connection = get_db_connection()
-        cursor = connection.cursor()
-        cursor.execute("DELETE FROM responses WHERE response_id = %s", (response_id,))
-        connection.commit()
-        cursor.close()
-        connection.close()
-
-        return jsonify({'success': True})
-    except Exception as e:
-        logger.error(f"刪除回覆失敗: {str(e)}")
-        return jsonify({'success': False, 'error': str(e)})
-
-
 @app.route('/api/responses', methods=['GET'])
 def get_responses():
     try:
@@ -1162,6 +1112,84 @@ def create_response():
         logger.error(f"創建回覆失敗: {str(e)}")
         return jsonify({'success': False, 'error': str(e)})
 
+
+@app.route('/api/discussions/<int:discussion_id>', methods=['DELETE'])
+@login_required  # 確保用戶已登入
+def delete_discussion(discussion_id):
+    try:
+        # 檢查當前用戶是否為教師
+        if current_user.role != 'teacher':
+            return jsonify({'success': False, 'error': '只有老師可以刪除討論'}), 403
+
+        connection = get_db_connection()
+        cursor = connection.cursor()
+
+        # 首先檢查討論是否存在
+        cursor.execute("SELECT course_id FROM discussions WHERE discussion_id = %s", (discussion_id,))
+        discussion = cursor.fetchone()
+
+        if not discussion:
+            cursor.close()
+            connection.close()
+            return jsonify({'success': False, 'error': '討論不存在'}), 404
+
+        # 刪除相關的回覆
+        cursor.execute("DELETE FROM responses WHERE discussion_id = %s", (discussion_id,))
+
+        # 刪除討論
+        cursor.execute("DELETE FROM discussions WHERE discussion_id = %s", (discussion_id,))
+
+        connection.commit()
+        cursor.close()
+        connection.close()
+
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"刪除討論失敗: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/responses/<int:response_id>', methods=['DELETE'])
+@login_required  # 確保用戶已登入
+def delete_response(response_id):
+    try:
+        # 檢查當前用戶是否為教師
+        if current_user.role != 'teacher':
+            return jsonify({'success': False, 'error': '只有老師可以刪除回覆'}), 403
+
+        connection = get_db_connection()
+        cursor = connection.cursor()
+
+        # 首先檢查回覆是否存在
+        cursor.execute("SELECT discussion_id FROM responses WHERE response_id = %s", (response_id,))
+        response = cursor.fetchone()
+
+        if not response:
+            cursor.close()
+            connection.close()
+            return jsonify({'success': False, 'error': '回覆不存在'}), 404
+
+        # 刪除回覆
+        cursor.execute("DELETE FROM responses WHERE response_id = %s", (response_id,))
+
+        connection.commit()
+        cursor.close()
+        connection.close()
+
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"刪除回覆失敗: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)})
+
+@app.route('/api/user/status')
+@login_required
+def get_user_status():
+    return jsonify({
+        'success': True,
+        'role': current_user.role,
+        'username': current_user.username,
+        'user_id': current_user.id
+    })
+
 @app.route('/register', methods=['GET'])
 def register_page():
     return render_template('register.html')
@@ -1224,6 +1252,34 @@ def logout():
     return redirect(url_for('index'))  # 確保'index'是你的首頁路由名稱
 
 
+@app.route('/api/dashboard_data', methods=['GET'])
+@login_required
+def dashboard_data():
+    try:
+        user_id = current_user.id  # 只抓取當前使用者的紀錄
+        connection = get_db_connection()
+        cursor = connection.cursor(dictionary=True)
+
+        # 取得該使用者的所有運動紀錄
+        cursor.execute("""
+            SELECT timestamp, weight, reps, sets, exercise_type
+            FROM exercise_info
+            WHERE student_id = %s
+            ORDER BY timestamp ASC
+        """, (user_id,))
+        records = cursor.fetchall()
+
+        cursor.close()
+        connection.close()
+
+        # 可在這裡進一步聚合數據，例：
+        # - 依照日期統計運動次數或總重量
+        # - 根據目標數據計算完成百分比
+        # 此處範例直接回傳原始紀錄，由前端或後端後續處理
+        return jsonify({'success': True, 'records': records})
+    except Exception as e:
+        logger.error(f"取得儀表板數據失敗: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 if __name__ == '__main__':
